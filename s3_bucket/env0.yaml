@@ -10,3 +10,13 @@ deploy:
             echo "Environment ID: $ENV0_ENVIRONMENT_ID"
             echo "Project Name: $ENV0_PROJECT_NAME"
             echo "Deployment Log ID: $ENV0_DEPLOYMENT_LOG_ID"
+
+drift_remediation:
+  steps:
+    - name: Attempt Remediation
+      run: |
+        for i in {1..3}; do
+          terraform apply -auto-approve && break
+          echo "Retry $i failed, waiting..."
+          sleep 30
+        done
