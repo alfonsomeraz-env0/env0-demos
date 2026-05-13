@@ -5,14 +5,14 @@ environments:
 
   db:
     name: "Database"
-    templateName: "s3_bucket"
+    templateName: "s3-bucket"
     requiresApproval: true
     needs:
       - vpc
 
   sg:
     name: "Security Group"
-    templateName: "security_group"
+    templateName: "security-group"
     needs:
       - vpc
 

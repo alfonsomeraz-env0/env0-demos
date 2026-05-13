@@ -10,14 +10,6 @@ deploy:
             echo "Environment: $ENV0_ENVIRONMENT_NAME"
             echo "Region: us-east-2"
 
-    terraformPlan:
-      after:
-        - name: Apply all modules with real dependency outputs
-          run: |
-            terragrunt run-all apply -auto-approve --terragrunt-non-interactive
-        - name: Regenerate plan files to reflect applied state
-          run: |
-            terragrunt run-all plan -out=.tf-plan --terragrunt-non-interactive
 
 destroy:
   steps:
