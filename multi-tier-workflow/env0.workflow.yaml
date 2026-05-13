@@ -1,7 +1,7 @@
 environments:
   vpc:
     name: "VPC and Network"
-    templateName: "vpc"
+    templateName: "vpc - workflow"
 
   db:
     name: "Database"
@@ -12,13 +12,13 @@ environments:
 
   sg:
     name: "Security Group"
-    templateName: "security-group"
+    templateName: "security group - workflow"
     needs:
       - vpc
 
   ec2:
     name: "EC2"
-    templateName: "ec2"
+    templateName: "ec2 - workflow"
     needs:
       - db
       - sg
