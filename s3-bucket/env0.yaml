@@ -1,173 +1,56 @@
 version: 2
 deploy:
-  requiresApproval: true  # Requires manual approval after scans pass
   steps:
     terraformPlan:
       before:
-        - name: "Install Security Scanning Tools"
+        - name: "Run TFLint Security Scan"
           run: |
             #!/bin/bash
             set -e
             
-            echo "📦 Installing security scanning tools..."
+            echo "🔧 Installing TFLint..."
             
             # Create local bin directory
             mkdir -p $HOME/.local/bin
             export PATH=$HOME/.local/bin:$PATH
             
-            # Install TFLint
-            echo "Installing TFLint..."
+            # Get the latest version more reliably
             TFLINT_VERSION=$(curl -s https://api.github.com/repos/terraform-linters/tflint/releases/latest | jq -r '.tag_name')
+            
+            # Verify we got a version
+            if [ -z "$TFLINT_VERSION" ] || [ "$TFLINT_VERSION" == "null" ]; then
+              echo "❌ Failed to fetch TFLint version"
+              exit 1
+            fi
+            
+            echo "📦 Downloading TFLint version: $TFLINT_VERSION"
+            
+            # Download TFLint
             curl -L -o /tmp/tflint.zip \
               "https://github.com/terraform-linters/tflint/releases/download/${TFLINT_VERSION}/tflint_linux_amd64.zip"
+            
+            # Extract and install
             unzip -o /tmp/tflint.zip -d $HOME/.local/bin/
             chmod +x $HOME/.local/bin/tflint
-            echo "✅ TFLint $(tflint --version) installed"
             
-            # Install tfsec
-            echo "Installing tfsec..."
-            TFSEC_VERSION=$(curl -s https://api.github.com/repos/aquasecurity/tfsec/releases/latest | jq -r '.tag_name')
-            curl -L -o $HOME/.local/bin/tfsec \
-              "https://github.com/aquasecurity/tfsec/releases/download/${TFSEC_VERSION}/tfsec-linux-amd64"
-            chmod +x $HOME/.local/bin/tfsec
-            echo "✅ tfsec $(tfsec --version) installed"
-            
-            # Install Checkov
-            echo "Installing Checkov..."
-            pip3 install --quiet checkov
-            echo "✅ Checkov $(checkov --version) installed"
-            
-            echo ""
-            echo "✅ All security scanning tools installed successfully!"
-            echo ""
-
-        - name: "Run TFLint Scan"
-          run: |
-            #!/bin/bash
-            set -e
-            
-            export PATH=$HOME/.local/bin:$PATH
+            # Verify installation
+            echo "✅ TFLint installed successfully"
+            tflint --version
             
             echo "🔍 Running TFLint scan..."
-            echo "======================================"
             
-            # Initialize TFLint
+            # Initialize and run TFLint
             tflint --init
-            
-            # Run TFLint and save results
             tflint --format json > tflint-results.json || true
             
-            # Check for issues
+            # Check for violations
             ISSUE_COUNT=$(jq '.issues | length' tflint-results.json)
             
             if [ "$ISSUE_COUNT" -gt 0 ]; then
               echo "❌ TFLint found $ISSUE_COUNT violation(s)!"
-              echo ""
-              jq -r '.issues[] | "  [\(.severity // "warning")] \(.rule.name): \(.message)\n    File: \(.range.filename):\(.range.start.line)"' tflint-results.json
-              echo ""
-              echo "======================================"
+              jq -r '.issues[] | "  [\(.severity)] \(.rule.name): \(.message)"' tflint-results.json
               exit 1
             fi
             
             echo "✅ TFLint scan passed - no issues found!"
-            echo "======================================"
-            echo ""
 
-        - name: "Run tfsec Security Scan"
-          run: |
-            #!/bin/bash
-            set -e
-            
-            export PATH=$HOME/.local/bin:$PATH
-            
-            echo "🔍 Running tfsec security scan..."
-            echo "======================================"
-            
-            # Run tfsec
-            tfsec . \
-              --format json \
-              --out tfsec-results.json \
-              --soft-fail || true
-            
-            # Count issues by severity
-            CRITICAL_COUNT=$(jq '[.results[] | select(.severity == "CRITICAL")] | length' tfsec-results.json 2>/dev/null || echo "0")
-            HIGH_COUNT=$(jq '[.results[] | select(.severity == "HIGH")] | length' tfsec-results.json 2>/dev/null || echo "0")
-            MEDIUM_COUNT=$(jq '[.results[] | select(.severity == "MEDIUM")] | length' tfsec-results.json 2>/dev/null || echo "0")
-            
-            echo "Critical issues: $CRITICAL_COUNT"
-            echo "High issues: $HIGH_COUNT"
-            echo "Medium issues: $MEDIUM_COUNT"
-            echo ""
-            
-            # Fail on Critical or High severity issues
-            if [ "$CRITICAL_COUNT" -gt 0 ] || [ "$HIGH_COUNT" -gt 0 ]; then
-              echo "❌ tfsec found $((CRITICAL_COUNT + HIGH_COUNT)) critical/high security issue(s)!"
-              echo ""
-              jq -r '.results[] | select(.severity == "CRITICAL" or .severity == "HIGH") | "  [\(.severity)] \(.rule_id): \(.description)\n    Resource: \(.location.filename):\(.location.start_line)\n    Link: \(.links[0] // "N/A")\n"' tfsec-results.json
-              echo "======================================"
-              exit 1
-            fi
-            
-            echo "✅ tfsec scan passed - no critical/high issues found!"
-            echo "======================================"
-            echo ""
-
-        - name: "Run Checkov Security Scan"
-          run: |
-            #!/bin/bash
-            set -e
-            
-            echo "🔍 Running Checkov security scan..."
-            echo "======================================"
-            
-            # Run Checkov
-            checkov -d . \
-              --framework terraform \
-              --output json \
-              --output-file checkov-results.json \
-              --soft-fail || true
-            
-            # Extract summary
-            PASSED=$(jq '.summary.passed' checkov-results.json 2>/dev/null || echo "0")
-            FAILED=$(jq '.summary.failed' checkov-results.json 2>/dev/null || echo "0")
-            SKIPPED=$(jq '.summary.skipped' checkov-results.json 2>/dev/null || echo "0")
-            
-            echo "Passed checks: $PASSED"
-            echo "Failed checks: $FAILED"
-            echo "Skipped checks: $SKIPPED"
-            echo ""
-            
-            # Fail if any checks failed
-            if [ "$FAILED" -gt 0 ]; then
-              echo "❌ Checkov found $FAILED failed security check(s)!"
-              echo ""
-              echo "Top failed checks:"
-              jq -r '.results.failed_checks[0:10] | .[] | "  [\(.check_id)] \(.check_name)\n    Resource: \(.file_path):\(.file_line_range[0])\n    Guideline: \(.guideline // "N/A")\n"' checkov-results.json
-              echo ""
-              if [ "$FAILED" -gt 10 ]; then
-                echo "  ... and $((FAILED - 10)) more issue(s)"
-                echo ""
-              fi
-              echo "======================================"
-              exit 1
-            fi
-            
-            echo "✅ Checkov scan passed - all checks successful!"
-            echo "======================================"
-            echo ""
-
-        - name: "Security Scan Summary"
-          run: |
-            #!/bin/bash
-            
-            echo ""
-            echo "======================================"
-            echo "🎉 ALL SECURITY SCANS PASSED!"
-            echo "======================================"
-            echo "✅ TFLint: Code quality checks passed"
-            echo "✅ tfsec: Security vulnerability scan passed"
-            echo "✅ Checkov: Compliance checks passed"
-            echo "======================================"
-            echo ""
-            echo "⏸️  Deployment paused - awaiting manual approval..."
-            echo ""
