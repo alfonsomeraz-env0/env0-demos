@@ -1,0 +1,20 @@
+environments:
+  eks-cluster:
+    name: "EKS Cluster"
+    templateName: "multi-iac-eks-cluster"
+
+  argocd:
+    name: "Argo CD"
+    templateName: "multi-iac-argocd"
+    requiresApproval: true
+    needs:
+      - eks-cluster
+
+  k8s-config:
+    name: "Kubernetes Config"
+    templateName: "multi-iac-ansible-config"
+    needs:
+      - argocd
+
+settings:
+  environmentRemovalStrategy: destroy

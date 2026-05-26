@@ -1,0 +1,96 @@
+---
+- name: Configure Kubernetes namespaces and Argo CD bootstrap
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    argocd_namespace: argocd
+    app_namespaces:
+      - name: staging
+        labels:
+          env: staging
+          managed-by: argocd
+      - name: production
+        labels:
+          env: production
+          managed-by: argocd
+
+  tasks:
+    - name: Verify cluster connectivity
+      kubernetes.core.k8s_info:
+        kind: Node
+      register: nodes
+
+    - name: Print connected nodes
+      ansible.builtin.debug:
+        msg: "Connected to cluster — {{ nodes.resources | length }} node(s) ready"
+
+    - name: Create application namespaces
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: "{{ item.name }}"
+            labels: "{{ item.labels }}"
+      loop: "{{ app_namespaces }}"
+
+    - name: Wait for Argo CD server to be healthy
+      kubernetes.core.k8s_info:
+        kind: Deployment
+        namespace: "{{ argocd_namespace }}"
+        name: argocd-server
+        wait: true
+        wait_condition:
+          type: Available
+          status: "True"
+        wait_timeout: 300
+
+    - name: Label argocd namespace for network policy
+      kubernetes.core.k8s:
+        state: patched
+        kind: Namespace
+        name: "{{ argocd_namespace }}"
+        definition:
+          metadata:
+            labels:
+              kubernetes.io/metadata.name: argocd
+              managed-by: env0
+
+    - name: Create Argo CD project for demo apps
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: argoproj.io/v1alpha1
+          kind: AppProject
+          metadata:
+            name: demo
+            namespace: "{{ argocd_namespace }}"
+          spec:
+            description: Demo project managed by env0 multi-iac workflow
+            sourceRepos:
+              - "*"
+            destinations:
+              - namespace: staging
+                server: https://kubernetes.default.svc
+              - namespace: production
+                server: https://kubernetes.default.svc
+            clusterResourceWhitelist:
+              - group: ""
+                kind: Namespace
+
+    - name: Verify namespaces exist
+      kubernetes.core.k8s_info:
+        kind: Namespace
+        label_selectors:
+          - managed-by=argocd
+      register: managed_namespaces
+
+    - name: Print summary
+      ansible.builtin.debug:
+        msg:
+          - "Cluster configuration complete"
+          - "Namespaces managed by Argo CD: {{ managed_namespaces.resources | map(attribute='metadata.name') | list }}"
+          - "Argo CD project 'demo' is ready"

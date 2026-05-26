@@ -1,0 +1,113 @@
+version: 2
+
+deploy:
+  steps:
+    ansibleRun:
+      before:
+        - name: Install Python dependencies
+          run: |
+            pip3 install --quiet \
+              ansible \
+              ansible-lint \
+              kubernetes \
+              openshift
+
+        - name: Install Ansible Kubernetes collection
+          run: |
+            ansible-galaxy collection install kubernetes.core --force
+
+        - name: Security Scan — ansible-lint
+          run: |
+            echo "================================================"
+            echo "  SECURITY SCAN — ansible-lint"
+            echo "================================================"
+            ansible-lint playbook.yml \
+              --profile moderate \
+              --nocolor \
+              || true
+            echo "================================================"
+            echo "  Lint complete. Review findings above."
+            echo "================================================"
+
+        - name: Configure kubectl for EKS
+          run: |
+            aws eks update-kubeconfig \
+              --region "$AWS_REGION" \
+              --name "$CLUSTER_NAME"
+            echo "Cluster access verified:"
+            kubectl get nodes --no-headers | awk '{print "  " $1 " (" $2 ")"}'
+
+      after:
+        - name: Post-Deploy Validation — Namespace & Project Check
+          run: |
+            echo "================================================"
+            echo "  POST-DEPLOY VALIDATION — Kubernetes config"
+            echo "================================================"
+
+            echo ""
+            echo "--- Managed namespaces ---"
+            kubectl get namespaces -l managed-by=argocd \
+              -o custom-columns='NAME:.metadata.name,STATUS:.status.phase,LABELS:.metadata.labels'
+
+            echo ""
+            echo "--- Argo CD AppProjects ---"
+            kubectl get appprojects -n argocd \
+              -o custom-columns='NAME:.metadata.name,DESTINATIONS:.spec.destinations[*].namespace' \
+              2>/dev/null || echo "  (no AppProjects found)"
+
+            echo ""
+            NAMESPACE_COUNT=$(kubectl get namespaces -l managed-by=argocd --no-headers 2>/dev/null | wc -l)
+            echo "Total managed namespaces: $NAMESPACE_COUNT"
+            echo "================================================"
+
+        - name: Verify configuration
+          run: |
+            echo "============================================"
+            echo "Ansible configuration complete"
+            echo "--------------------------------------------"
+            echo "Namespaces:"
+            kubectl get namespaces -l managed-by=argocd --no-headers | awk '{print "  " $1}'
+            echo "Argo CD projects:"
+            kubectl get appprojects -n argocd --no-headers | awk '{print "  " $1}' 2>/dev/null || true
+            echo "============================================"
+
+        - name: Slack Notification — Config Complete
+          run: |
+            ENV=${ENV0_ENVIRONMENT_NAME:-k8s-config}
+            CLUSTER=$CLUSTER_NAME
+            NAMESPACE_COUNT=$(kubectl get namespaces -l managed-by=argocd --no-headers 2>/dev/null | wc -l | tr -d ' ')
+
+            PAYLOAD=$(cat <<MSG
+            {
+              "text": "*[env0] Kubernetes configuration applied*",
+              "attachments": [{
+                "color": "#B8E500",
+                "fields": [
+                  { "title": "Environment",         "value": "$ENV",             "short": true },
+                  { "title": "Cluster",             "value": "$CLUSTER",         "short": true },
+                  { "title": "Managed namespaces",  "value": "$NAMESPACE_COUNT", "short": true },
+                  { "title": "Status",              "value": "SUCCESS",          "short": true }
+                ]
+              }]
+            }
+            MSG
+            )
+
+            if [ -n "$SLACK_WEBHOOK_URL" ]; then
+              curl -s -X POST -H 'Content-type: application/json' \
+                --data "$PAYLOAD" "$SLACK_WEBHOOK_URL"
+              echo "Slack notification sent."
+            else
+              echo "SLACK_WEBHOOK_URL not configured — would have sent:"
+              echo "$PAYLOAD"
+            fi
+
+destroy:
+  steps:
+    ansibleRun:
+      before:
+        - name: Configure kubectl for EKS
+          run: |
+            aws eks update-kubeconfig \
+              --region "$AWS_REGION" \
+              --name "$CLUSTER_NAME"

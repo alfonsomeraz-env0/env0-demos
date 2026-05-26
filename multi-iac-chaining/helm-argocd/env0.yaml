@@ -1,0 +1,123 @@
+version: 2
+
+deploy:
+  steps:
+    helmInstall:
+      before:
+        - name: Configure kubectl for EKS
+          run: |
+            aws eks update-kubeconfig \
+              --region "$AWS_REGION" \
+              --name "$CLUSTER_NAME"
+            echo "Cluster nodes:"
+            kubectl get nodes
+
+        - name: Create argocd namespace
+          run: |
+            kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
+
+        - name: Security Scan — Helm Lint & Dry-Run
+          run: |
+            echo "================================================"
+            echo "  SECURITY SCAN — Helm Lint"
+            echo "================================================"
+            helm repo add argo https://argoproj.github.io/argo-helm --force-update
+            helm repo update
+
+            echo ""
+            echo "--- Linting values.yaml against argo-cd chart ---"
+            helm lint argo/argo-cd -f values.yaml && echo "Lint passed." || true
+
+            echo ""
+            echo "--- Dry-run template render (first 60 lines) ---"
+            helm template argocd argo/argo-cd \
+              --namespace argocd \
+              -f values.yaml \
+              | head -60
+
+            echo "================================================"
+            echo "  Helm scan complete."
+            echo "================================================"
+
+      after:
+        - name: Wait for Argo CD to become ready
+          run: |
+            echo "Waiting for Argo CD server deployment..."
+            kubectl rollout status deployment/argocd-server -n argocd --timeout=300s
+
+        - name: Post-Deploy Validation — Argo CD Health
+          run: |
+            echo "================================================"
+            echo "  POST-DEPLOY VALIDATION — Argo CD"
+            echo "================================================"
+
+            echo ""
+            echo "--- Argo CD pods ---"
+            kubectl get pods -n argocd -o wide
+
+            echo ""
+            echo "--- Argo CD services ---"
+            kubectl get svc -n argocd
+
+            READY=$(kubectl get pods -n argocd --no-headers \
+              | awk '{print $2}' \
+              | awk -F'/' '$1==$2 {c++} END {print c+0}')
+            TOTAL=$(kubectl get pods -n argocd --no-headers | wc -l)
+            echo ""
+            echo "Pods ready: $READY / $TOTAL"
+            echo "================================================"
+
+        - name: Print Argo CD access info
+          run: |
+            echo "============================================"
+            echo "Argo CD deployed successfully"
+            echo "--------------------------------------------"
+            ARGOCD_URL=$(kubectl get svc argocd-server -n argocd \
+              -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "pending")
+            echo "URL: https://$ARGOCD_URL"
+            INITIAL_PW=$(kubectl get secret argocd-initial-admin-secret \
+              -n argocd -o jsonpath='{.data.password}' | base64 --decode)
+            echo "Initial admin password: $INITIAL_PW"
+            echo "============================================"
+
+        - name: Slack Notification — Argo CD Deploy Complete
+          run: |
+            ENV=${ENV0_ENVIRONMENT_NAME:-argocd}
+            CLUSTER=$CLUSTER_NAME
+            ARGOCD_URL=$(kubectl get svc argocd-server -n argocd \
+              -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "pending")
+
+            PAYLOAD=$(cat <<MSG
+            {
+              "text": "*[env0] Argo CD deployed*",
+              "attachments": [{
+                "color": "#B8E500",
+                "fields": [
+                  { "title": "Environment", "value": "$ENV",              "short": true },
+                  { "title": "Cluster",     "value": "$CLUSTER",          "short": true },
+                  { "title": "Argo CD URL", "value": "https://$ARGOCD_URL", "short": false },
+                  { "title": "Status",      "value": "SUCCESS",           "short": true }
+                ]
+              }]
+            }
+            MSG
+            )
+
+            if [ -n "$SLACK_WEBHOOK_URL" ]; then
+              curl -s -X POST -H 'Content-type: application/json' \
+                --data "$PAYLOAD" "$SLACK_WEBHOOK_URL"
+              echo "Slack notification sent."
+            else
+              echo "SLACK_WEBHOOK_URL not configured — would have sent:"
+              echo "$PAYLOAD"
+            fi
+
+destroy:
+  steps:
+    helmDestroy:
+      before:
+        - name: Configure kubectl for EKS
+          run: |
+            aws eks update-kubeconfig \
+              --region "$AWS_REGION" \
+              --name "$CLUSTER_NAME"
