@@ -3,23 +3,60 @@ deploy:
   steps:
     terraformApply:
       after:
-        - name: "Print API endpoints"
+        - name: "Seed sample data"
           type: shell
           command: |
             API_URL=$(terraform output -raw api_url)
+            echo "Seeding sample items into $API_URL/items ..."
+
+            # Only seed if the table is empty
+            COUNT=$(curl -sf "$API_URL/items" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['count'])" 2>/dev/null || echo "0")
+
+            if [ "$COUNT" = "0" ]; then
+              curl -sf -X POST "$API_URL/items" \
+                -H "Content-Type: application/json" \
+                -d '{"name": "Deploy pipeline", "status": "done"}' > /dev/null
+
+              curl -sf -X POST "$API_URL/items" \
+                -H "Content-Type: application/json" \
+                -d '{"name": "Review PR plan diff", "status": "active"}' > /dev/null
+
+              curl -sf -X POST "$API_URL/items" \
+                -H "Content-Type: application/json" \
+                -d '{"name": "Merge to trigger apply", "status": "pending"}' > /dev/null
+
+              echo "Seeded 3 items."
+            else
+              echo "Table already has $COUNT item(s) — skipping seed."
+            fi
+
+        - name: "Verify API"
+          type: shell
+          command: |
+            API_URL=$(terraform output -raw api_url)
+
             echo ""
             echo "=========================================="
             echo "  Deployment complete!"
             echo "  API URL: $API_URL"
             echo "=========================================="
             echo ""
-            echo "Smoke test — listing items:"
-            curl -sf "$API_URL/items" | python3 -m json.tool || echo "(no items yet)"
+            echo "Live items:"
+            curl -sf "$API_URL/items" | python3 -c "
+            import sys, json
+            data = json.load(sys.stdin)
+            items = data['items']
+            print(f'  {'ID':<36}  {'Name':<30}  Status')
+            print(f'  {'-'*36}  {'-'*30}  ------')
+            for item in items:
+                print(f\"  {item['id']:<36}  {item['name']:<30}  {item.get('status', '-')}\")
+            print(f'')
+            print(f'  Total: {data[\"count\"]} item(s)')
+            "
             echo ""
-            echo "Quick-start commands:"
-            echo "  List:   curl $API_URL/items"
-            echo "  Create: curl -X POST $API_URL/items -H 'Content-Type: application/json' -d '{\"name\": \"hello env0\"}'"
-            echo "  Delete: curl -X DELETE $API_URL/items/<id>"
+            echo "Try it:"
+            echo "  curl $API_URL/items"
+            echo "  curl -X POST $API_URL/items -H 'Content-Type: application/json' -d '{\"name\": \"my task\"}'"
 
 destroy:
   steps:
