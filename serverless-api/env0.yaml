@@ -1,0 +1,31 @@
+version: 2
+deploy:
+  steps:
+    terraformApply:
+      after:
+        - name: "Print API endpoints"
+          type: shell
+          command: |
+            API_URL=$(terraform output -raw api_url)
+            echo ""
+            echo "=========================================="
+            echo "  Deployment complete!"
+            echo "  API URL: $API_URL"
+            echo "=========================================="
+            echo ""
+            echo "Smoke test — listing items:"
+            curl -sf "$API_URL/items" | python3 -m json.tool || echo "(no items yet)"
+            echo ""
+            echo "Quick-start commands:"
+            echo "  List:   curl $API_URL/items"
+            echo "  Create: curl -X POST $API_URL/items -H 'Content-Type: application/json' -d '{\"name\": \"hello env0\"}'"
+            echo "  Delete: curl -X DELETE $API_URL/items/<id>"
+
+destroy:
+  steps:
+    terraformDestroy:
+      before:
+        - name: "Confirm teardown"
+          type: shell
+          command: |
+            echo "Tearing down serverless-api in environment: $ENVIRONMENT_NAME"
