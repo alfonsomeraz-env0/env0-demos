@@ -1,5 +1,9 @@
 package env0
 
+# Import all three future keywords. env0's OPA (0.46.1) needs these explicit
+# imports to accept the `allow contains msg if { ... }` rule-head syntax;
+# newer OPA (1.x) accepts the imports too, so this parses on both.
+import future.keywords.contains
 import future.keywords.if
 import future.keywords.in
 
@@ -13,7 +17,7 @@ import future.keywords.in
 #   anything else (no allow rule fires)                  -> hold (env0 default)
 #
 # Inputs env0 provides automatically:
-#   input.deploymentRequest.triggerName  - "cd" for CI, "user" for manual, etc.
+#   input.deploymentRequest.triggerName  - "cd" for CI, "manual"/"user" otherwise
 #   input.plan.resource_changes[]        - terraform plan, per-resource actions
 #   input.policyData.pr_labels[]         - injected by the env0.yaml custom flow
 # ===========================================================================
@@ -38,17 +42,17 @@ allow contains msg if {
 	input.deploymentRequest.triggerName == "cd"
 	not has_label("skip-approval")
 	not has_deletions
-	msg := "CI deploy, no deletions, no skip-approval label — auto-approved ✅"
+	msg := "CI deploy, no deletions, no skip-approval label — auto-approved"
 }
 
 # --- HOLD: explicit label --------------------------------------------------
 pending contains msg if {
 	has_label("skip-approval")
-	msg := "PR label 'skip-approval' present — manual approval required 🔒"
+	msg := "PR label 'skip-approval' present — manual approval required"
 }
 
 # --- HOLD: destructive plan ------------------------------------------------
 pending contains msg if {
 	has_deletions
-	msg := "Plan includes resource deletions — manual approval required 🗑️"
+	msg := "Plan includes resource deletions — manual approval required"
 }
