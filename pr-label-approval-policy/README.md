@@ -58,11 +58,11 @@ The `env0.yaml` in this folder is picked up automatically.
 
 | Variable | Value | Notes |
 |---|---|---|
-| `GITHUB_TOKEN` | a PAT with repo read | **Mark as Sensitive** |
 | `GITHUB_ORG` | e.g. `env0` | repo owner |
 | `GITHUB_REPO` | e.g. `env0-demos` | repo name |
 | `ENV0_POLICY_DATA_PATH` | `policy_data.json` | **relative** path in the working dir — `/tmp` is NOT shared between the plan step and the policy-check step |
 | `bucket_prefix` | a globally-unique prefix | Terraform var |
+| `GITHUB_TOKEN` | a PAT with repo read | **Optional** — mark Sensitive. If unset, the flow falls back to env0's built-in `ENV0_VCS_ACCESS_TOKEN` from your GitHub VCS connection, so no extra PAT is usually needed |
 
 > For a quick demo without GitHub wiring, set `DEMO_PR_LABELS` instead (see
 > [Demo Walkthrough](#demo-walkthrough)) — the flow skips the API call entirely.
@@ -124,8 +124,9 @@ repo (`git rev-parse HEAD`) and calls GitHub's `GET /repos/{org}/{repo}/commits/
 endpoint, which returns the PR that contains that commit — labels included.
 
 ### One-time setup
-1. Set the real `GITHUB_TOKEN` / `GITHUB_ORG` / `GITHUB_REPO` variables and **remove**
-   `DEMO_PR_LABELS` / `DEMO_PR_NUMBER`.
+1. Set `GITHUB_ORG` / `GITHUB_REPO` and **remove** `DEMO_PR_LABELS` / `DEMO_PR_NUMBER`.
+   A token is optional — the flow uses env0's `ENV0_VCS_ACCESS_TOKEN` automatically;
+   set `GITHUB_TOKEN` only if you want to use a specific PAT.
 2. On the environment: **Settings → Continuous Deployment →** enable it, branch `main`,
    directory `pr-label-approval-policy`. (This is what makes the trigger `cd`.)
 3. In GitHub, create the `skip-approval` label if it doesn't exist

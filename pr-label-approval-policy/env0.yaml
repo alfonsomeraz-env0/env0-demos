@@ -14,10 +14,14 @@ version: 2
 # so a /tmp file yields "Failed to load dynamic policy data".
 #
 # Required env0 environment variables (set on the template or project):
-#   GITHUB_TOKEN   (sensitive)  - PAT with repo read access for label lookup
 #   GITHUB_ORG                  - e.g. "env0"
 #   GITHUB_REPO                 - e.g. "env0-demos"
 #   ENV0_POLICY_DATA_PATH       - RELATIVE path the policy reads: policy_data.json
+# Token (optional — falls back automatically):
+#   GITHUB_TOKEN   (sensitive)  - PAT with repo read. If unset, the flow uses
+#                                 env0's built-in ENV0_VCS_ACCESS_TOKEN (the
+#                                 token from your GitHub VCS connection), so no
+#                                 extra PAT setup is needed in most cases.
 # Optional for live demos (skips the API call and forces a label set):
 #   DEMO_PR_NUMBER              - hardcode a PR number
 #   DEMO_PR_LABELS              - JSON array, e.g. '["skip-approval"]'
@@ -50,8 +54,16 @@ deploy:
               exit 0
             fi
 
+            # Use an explicit GITHUB_TOKEN if provided, otherwise fall back to
+            # the token env0 already injects from your GitHub VCS connection.
+            TOKEN="${GITHUB_TOKEN:-$ENV0_VCS_ACCESS_TOKEN}"
+            if [ -z "$TOKEN" ]; then
+              echo "ℹ️  No GITHUB_TOKEN or ENV0_VCS_ACCESS_TOKEN — calling GitHub unauthenticated (rate-limited)"
+            fi
+
             API="https://api.github.com/repos/$GITHUB_ORG/$GITHUB_REPO"
-            AUTH=(-H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github+json")
+            AUTH=(-H "Accept: application/vnd.github+json")
+            [ -n "$TOKEN" ] && AUTH+=(-H "Authorization: token $TOKEN")
             LABELS=""
 
             # --- Resolve the PR number (explicit or PR-plan ref) --------------
