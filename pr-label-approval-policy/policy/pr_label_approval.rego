@@ -11,8 +11,8 @@ import future.keywords.in
 # Dynamic PR Label-Driven Approval Policy
 #
 # Decision flow (initial request):
-#   CI deploy + no "skip-approval" label + no deletions  -> auto-approve
-#   "skip-approval" label present                        -> hold for approval
+#   CI deploy + no "requires-approval" label + no deletions  -> auto-approve
+#   "requires-approval" label present                        -> hold for approval
 #   plan contains deletions                              -> hold for approval
 #   anything else                                        -> hold (env0 default)
 #
@@ -60,16 +60,16 @@ allow contains msg if {
 allow contains msg if {
 	not is_resume
 	input.deploymentRequest.triggerName == "cd"
-	not has_label("skip-approval")
+	not has_label("requires-approval")
 	not has_deletions
-	msg := "CI deploy, no deletions, no skip-approval label — auto-approved"
+	msg := "CI deploy, no deletions, no requires-approval label — auto-approved"
 }
 
 # --- HOLD: explicit label (initial request only) ---------------------------
 pending contains msg if {
 	not is_resume
-	has_label("skip-approval")
-	msg := "PR label 'skip-approval' present — manual approval required"
+	has_label("requires-approval")
+	msg := "PR label 'requires-approval' present — manual approval required"
 }
 
 # --- HOLD: destructive plan (initial request only) -------------------------

@@ -24,7 +24,7 @@ version: 2
 #                                 extra PAT setup is needed in most cases.
 # Optional for live demos (skips the API call and forces a label set):
 #   DEMO_PR_NUMBER              - hardcode a PR number
-#   DEMO_PR_LABELS              - JSON array, e.g. '["skip-approval"]'
+#   DEMO_PR_LABELS              - JSON array, e.g. '["requires-approval"]'
 #
 # Label resolution order:
 #   1. DEMO_PR_LABELS set            -> use those labels verbatim (no GitHub call)

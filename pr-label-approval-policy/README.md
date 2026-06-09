@@ -11,9 +11,9 @@ flagged or when the plan would delete resources. Combines two env0 primitives:
 ```
 PR merged → CI triggers deploy → plan runs → custom flow fetches PR labels
    → writes policyData JSON → OPA policy evaluates:
-       ├── "skip-approval" label?     → HOLD for approval 🔒
-       ├── plan contains deletions?   → HOLD for approval 🗑️
-       └── neither (CI trigger)?      → AUTO-APPROVE ✅
+       ├── "requires-approval" label?   → HOLD for approval 🔒
+       ├── plan contains deletions?     → HOLD for approval 🗑️
+       └── neither (CI trigger)?        → AUTO-APPROVE ✅
 ```
 
 ## What's in this folder
@@ -29,7 +29,7 @@ PR merged → CI triggers deploy → plan runs → custom flow fetches PR labels
 
 ## Decision Matrix
 
-| `triggerName` | `skip-approval` label | Deletions | Result |
+| `triggerName` | `requires-approval` label | Deletions | Result |
 |---|---|---|---|
 | `cd` | ❌ | ❌ | ✅ Auto-approve |
 | `cd` | ✅ | ❌ | 🔒 Pending |
@@ -99,7 +99,7 @@ You can drive all four matrix outcomes without touching GitHub by setting
 - → Policy returns `allow` → deploy proceeds with no human gate ✅
 
 **B) Hold — flagged PR**
-- Set `DEMO_PR_LABELS='["skip-approval"]'`
+- Set `DEMO_PR_LABELS='["requires-approval"]'`
 - → `pending` fires → deployment waits for manual approval 🔒
 
 **C) Hold — destructive plan**
@@ -129,20 +129,20 @@ endpoint, which returns the PR that contains that commit — labels included.
    set `GITHUB_TOKEN` only if you want to use a specific PAT.
 2. On the environment: **Settings → Continuous Deployment →** enable it, branch `main`,
    directory `pr-label-approval-policy`. (This is what makes the trigger `cd`.)
-3. In GitHub, create the `skip-approval` label if it doesn't exist
+3. In GitHub, create the `requires-approval` label if it doesn't exist
    (**Issues/PRs → Labels → New label**).
 
 ### Demo 1 — flagged PR holds for approval 🔒
 1. Branch, change something in `pr-label-approval-policy/` (e.g. a tag in `main.tf`).
-2. Open a PR → add the **`skip-approval`** label.
+2. Open a PR → add the **`requires-approval`** label.
 3. **Merge with "Squash and merge"** (or "Create a merge commit" — both associate the
    commit with the PR; avoid rebase-merge, which rewrites SHAs).
 4. CD fires a `cd` deploy. In the plan log, the **"Fetch PR Labels into policyData"**
-   step prints `🏷️ Resolved labels: ["skip-approval"]`.
+   step prints `🏷️ Resolved labels: ["requires-approval"]`.
 5. Policy → `pending` → deployment waits for approval.
 
 ### Demo 2 — clean PR auto-approves ✅
-1. Open another PR with a change **but no `skip-approval` label**.
+1. Open another PR with a change **but no `requires-approval` label**.
 2. Squash-merge it.
 3. CD fires a `cd` deploy, labels resolve to `[]`, no deletions → policy returns
    `allow` → **deploys with no human gate**.
