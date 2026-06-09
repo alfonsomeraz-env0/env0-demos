@@ -39,6 +39,7 @@ Each folder is a standalone demo — import it into env0 as a template and deplo
 | Demo | Description |
 |---|---|
 | [`custom-flows/`](./custom-flows/README.md) | Custom flow examples: TFLint, multi-tool scanning, approval gates |
+| [`pr-label-approval-policy/`](./pr-label-approval-policy/README.md) | Custom flow + OPA approval policy — auto-approve CI deploys, hold on PR label or deletions |
 | [`cloudformation/`](./cloudformation/README.md) | CloudFormation via env0 — shows IaC-tool agnosticism |
 
 ### Terragrunt
@@ -117,6 +118,7 @@ env0-demos/
 │       ├── ec2/
 │       └── s3/
 ├── custom-flows/               # Custom flow examples
+├── pr-label-approval-policy/   # Custom flow + OPA approval policy (PR labels)
 ├── cloudformation/             # CloudFormation
 ├── terragrunt/                 # Terragrunt config
 ├── terragrunt-bootstrap/       # Terragrunt state backend

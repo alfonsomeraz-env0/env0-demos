@@ -1,0 +1,63 @@
+version: 2
+
+# ---------------------------------------------------------------------------
+# Custom flow: fetch the merged PR's GitHub labels and write them into the
+# policy-data file. env0's Approval Policy (OPA/Rego) reads this file and
+# decides whether to auto-approve the deployment or hold it for a human.
+#
+# Runs in `terraformPlan.after` so the file exists before the approval policy
+# is evaluated (policies run after plan, before apply).
+#
+# Required env0 environment variables (set on the template or project):
+#   GITHUB_TOKEN   (sensitive)  - PAT with repo read access for label lookup
+#   GITHUB_ORG                  - e.g. "env0"
+#   GITHUB_REPO                 - e.g. "env0-demos"
+#   ENV0_POLICY_DATA_PATH       - path the policy reads, e.g. /tmp/policy_data.json
+# Optional for live demos (skips the API call and forces a label set):
+#   DEMO_PR_NUMBER              - hardcode a PR number
+#   DEMO_PR_LABELS              - JSON array, e.g. '["skip-approval"]'
+# ---------------------------------------------------------------------------
+deploy:
+  steps:
+    terraformPlan:
+      after:
+        - name: "Fetch PR Labels into policyData"
+          run: |
+            #!/bin/bash
+            set -e
+
+            OUT="${ENV0_POLICY_DATA_PATH:-/tmp/policy_data.json}"
+
+            # --- Demo override: skip GitHub entirely and inject labels ---------
+            if [ -n "$DEMO_PR_LABELS" ]; then
+              echo "🎛️  DEMO_PR_LABELS override set — using injected labels"
+              echo "{\"pr_labels\": $DEMO_PR_LABELS}" > "$OUT"
+              cat "$OUT"
+              exit 0
+            fi
+
+            # --- Resolve the PR number ----------------------------------------
+            PR_NUMBER="$DEMO_PR_NUMBER"
+            if [ -z "$PR_NUMBER" ]; then
+              # env0 exposes the triggering git ref in ENV0_GIT_REVISION.
+              # PR merges often look like refs/pull/123/merge.
+              PR_NUMBER=$(echo "$ENV0_GIT_REVISION" | grep -oE 'pull/[0-9]+' | grep -oE '[0-9]+' || true)
+            fi
+
+            if [ -z "$PR_NUMBER" ]; then
+              echo "ℹ️  No PR number resolved — writing empty labels array"
+              echo '{"pr_labels": []}' > "$OUT"
+              cat "$OUT"
+              exit 0
+            fi
+
+            echo "🔎 Fetching labels for PR #$PR_NUMBER from $GITHUB_ORG/$GITHUB_REPO"
+            LABELS=$(curl -sf \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/$GITHUB_ORG/$GITHUB_REPO/issues/${PR_NUMBER}/labels" \
+              | jq -c '[.[].name]') || LABELS="[]"
+
+            echo "🏷️  Labels: $LABELS"
+            echo "{\"pr_labels\": $LABELS}" > "$OUT"
+            cat "$OUT"
