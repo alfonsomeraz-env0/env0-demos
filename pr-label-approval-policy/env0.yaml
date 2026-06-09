@@ -63,13 +63,31 @@ deploy:
 
             API="https://api.github.com/repos/$GITHUB_ORG/$GITHUB_REPO"
 
-            # GitHub GET that adds the auth header only when a token is present.
-            gh() {
-              if [ -n "$TOKEN" ]; then
-                curl -sf -H "Accept: application/vnd.github+json" \
-                  -H "Authorization: token $TOKEN" "$1"
+            # GitHub GET that captures BOTH the response body and HTTP status, so
+            # an auth/permission failure is logged loudly instead of silently
+            # collapsing to an empty label set. Sets GH_CODE and GH_BODY.
+            gh_get() {
+              _resp=$(curl -s -w '\n%{http_code}' \
+                -H "Accept: application/vnd.github+json" \
+                ${TOKEN:+-H "Authorization: token $TOKEN"} "$1")
+              GH_CODE=$(printf '%s' "$_resp" | tail -n1)
+              GH_BODY=$(printf '%s' "$_resp" | sed '$d')
+            }
+
+            # Run a labels-extracting jq filter ($2) over a successful GET of $1.
+            # On any non-200 it logs the status + body and returns an empty set.
+            # NOTE: only the label JSON goes to stdout (it is captured by the
+            # caller); all human-facing diagnostics go to stderr (>&2).
+            resolve_labels() {
+              gh_get "$1"
+              echo "   → HTTP $GH_CODE" >&2
+              if [ "$GH_CODE" = "200" ]; then
+                printf '%s' "$GH_BODY" | jq -c "$2"
               else
-                curl -sf -H "Accept: application/vnd.github+json" "$1"
+                echo "⚠️  GitHub API call failed (HTTP $GH_CODE) — labels will be empty." >&2
+                echo "    This usually means the token cannot read the API." >&2
+                printf '    Response: %s\n' "$(printf '%s' "$GH_BODY" | head -c 300)" >&2
+                echo "[]"
               fi
             }
 
@@ -84,13 +102,13 @@ deploy:
 
             if [ -n "$PR_NUMBER" ]; then
               echo "🔎 Reading labels from PR #$PR_NUMBER"
-              LABELS=$(gh "$API/issues/${PR_NUMBER}/labels" | jq -c '[.[].name]') || LABELS=""
+              LABELS=$(resolve_labels "$API/issues/${PR_NUMBER}/labels" '[.[].name]')
             else
               # --- CD on merge/push: find the PR that contains the deployed SHA -
               SHA="${DEMO_COMMIT_SHA:-$(git rev-parse HEAD 2>/dev/null || true)}"
               if [ -n "$SHA" ]; then
                 echo "🔎 Resolving PR for commit $SHA via commits/{sha}/pulls"
-                LABELS=$(gh "$API/commits/${SHA}/pulls" | jq -c '[.[].labels[].name] | unique') || LABELS=""
+                LABELS=$(resolve_labels "$API/commits/${SHA}/pulls" '[.[].labels[].name] | unique')
               fi
             fi
 
