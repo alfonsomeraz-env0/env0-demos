@@ -61,6 +61,16 @@ deploy:
               echo "ℹ️  No GITHUB_TOKEN or ENV0_VCS_ACCESS_TOKEN — calling GitHub unauthenticated (rate-limited)"
             fi
 
+            # Derive org/repo from the env0-provided template repository URL when
+            # GITHUB_ORG / GITHUB_REPO aren't set explicitly. ENV0_TEMPLATE_REPOSITORY
+            # looks like https://github.com/ORG/REPO(.git) (or git@github.com:ORG/REPO).
+            if [ -z "$GITHUB_ORG" ] || [ -z "$GITHUB_REPO" ]; then
+              _slug=$(echo "$ENV0_TEMPLATE_REPOSITORY" | sed -E 's#^.*github\.com[:/]##; s#\.git$##')
+              GITHUB_ORG="${GITHUB_ORG:-$(echo "$_slug" | cut -d/ -f1)}"
+              GITHUB_REPO="${GITHUB_REPO:-$(echo "$_slug" | cut -d/ -f2)}"
+            fi
+            echo "📦 Repo: ${GITHUB_ORG:-<unset>}/${GITHUB_REPO:-<unset>}"
+
             API="https://api.github.com/repos/$GITHUB_ORG/$GITHUB_REPO"
 
             # GitHub GET that captures BOTH the response body and HTTP status, so
