@@ -21,6 +21,13 @@ version: 2
 # Optional for live demos (skips the API call and forces a label set):
 #   DEMO_PR_NUMBER              - hardcode a PR number
 #   DEMO_PR_LABELS              - JSON array, e.g. '["skip-approval"]'
+#
+# Label resolution order:
+#   1. DEMO_PR_LABELS set            -> use those labels verbatim (no GitHub call)
+#   2. DEMO_PR_NUMBER set            -> read labels from that PR
+#   3. ENV0_GIT_REVISION has pull/N  -> read labels from PR N (PR-plan context)
+#   4. otherwise (CD on merge/push)  -> read the deployed commit SHA from the
+#      cloned repo and ask GitHub which PR contains it; that PR's labels are used.
 # ---------------------------------------------------------------------------
 deploy:
   steps:
@@ -43,28 +50,33 @@ deploy:
               exit 0
             fi
 
-            # --- Resolve the PR number ----------------------------------------
+            API="https://api.github.com/repos/$GITHUB_ORG/$GITHUB_REPO"
+            AUTH=(-H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github+json")
+            LABELS=""
+
+            # --- Resolve the PR number (explicit or PR-plan ref) --------------
             PR_NUMBER="$DEMO_PR_NUMBER"
             if [ -z "$PR_NUMBER" ]; then
-              # env0 exposes the triggering git ref in ENV0_GIT_REVISION.
-              # PR merges often look like refs/pull/123/merge.
+              # In env0 PR-plan contexts the ref can look like refs/pull/123/merge.
               PR_NUMBER=$(echo "$ENV0_GIT_REVISION" | grep -oE 'pull/[0-9]+' | grep -oE '[0-9]+' || true)
             fi
 
-            if [ -z "$PR_NUMBER" ]; then
-              echo "ℹ️  No PR number resolved — writing empty labels array"
-              echo '{"pr_labels": []}' > "$OUT"
-              cat "$OUT"
-              exit 0
+            if [ -n "$PR_NUMBER" ]; then
+              echo "🔎 Reading labels from PR #$PR_NUMBER"
+              LABELS=$(curl -sf "${AUTH[@]}" "$API/issues/${PR_NUMBER}/labels" | jq -c '[.[].name]') || LABELS=""
+            else
+              # --- CD on merge/push: find the PR that contains the deployed SHA -
+              SHA="${DEMO_COMMIT_SHA:-$(git rev-parse HEAD 2>/dev/null || true)}"
+              if [ -n "$SHA" ]; then
+                echo "🔎 Resolving PR for commit $SHA via commits/{sha}/pulls"
+                LABELS=$(curl -sf "${AUTH[@]}" "$API/commits/${SHA}/pulls" \
+                  | jq -c '[.[].labels[].name] | unique') || LABELS=""
+              fi
             fi
 
-            echo "🔎 Fetching labels for PR #$PR_NUMBER from $GITHUB_ORG/$GITHUB_REPO"
-            LABELS=$(curl -sf \
-              -H "Authorization: token $GITHUB_TOKEN" \
-              -H "Accept: application/vnd.github+json" \
-              "https://api.github.com/repos/$GITHUB_ORG/$GITHUB_REPO/issues/${PR_NUMBER}/labels" \
-              | jq -c '[.[].name]') || LABELS="[]"
+            # Default to an empty set if nothing resolved.
+            [ -n "$LABELS" ] && [ "$LABELS" != "null" ] || LABELS="[]"
 
-            echo "🏷️  Labels: $LABELS"
+            echo "🏷️  Resolved labels: $LABELS"
             echo "{\"pr_labels\": $LABELS}" > "$OUT"
             cat "$OUT"

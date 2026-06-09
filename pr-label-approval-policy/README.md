@@ -113,6 +113,44 @@ You can drive all four matrix outcomes without touching GitHub by setting
 
 ---
 
+## Demonstrating the Real PR-Triggered Flow
+
+This is the end-to-end story: **merge a PR → Continuous Deployment fires → the flow
+reads that PR's labels from GitHub → the policy decides.** No `DEMO_*` overrides.
+
+How the PR is resolved: on a CD run the revision is just `main`, so there's no PR
+number in the ref. Instead the flow reads the **deployed commit SHA** from the cloned
+repo (`git rev-parse HEAD`) and calls GitHub's `GET /repos/{org}/{repo}/commits/{sha}/pulls`
+endpoint, which returns the PR that contains that commit — labels included.
+
+### One-time setup
+1. Set the real `GITHUB_TOKEN` / `GITHUB_ORG` / `GITHUB_REPO` variables and **remove**
+   `DEMO_PR_LABELS` / `DEMO_PR_NUMBER`.
+2. On the environment: **Settings → Continuous Deployment →** enable it, branch `main`,
+   directory `pr-label-approval-policy`. (This is what makes the trigger `cd`.)
+3. In GitHub, create the `skip-approval` label if it doesn't exist
+   (**Issues/PRs → Labels → New label**).
+
+### Demo 1 — flagged PR holds for approval 🔒
+1. Branch, change something in `pr-label-approval-policy/` (e.g. a tag in `main.tf`).
+2. Open a PR → add the **`skip-approval`** label.
+3. **Merge with "Squash and merge"** (or "Create a merge commit" — both associate the
+   commit with the PR; avoid rebase-merge, which rewrites SHAs).
+4. CD fires a `cd` deploy. In the plan log, the **"Fetch PR Labels into policyData"**
+   step prints `🏷️ Resolved labels: ["skip-approval"]`.
+5. Policy → `pending` → deployment waits for approval.
+
+### Demo 2 — clean PR auto-approves ✅
+1. Open another PR with a change **but no `skip-approval` label**.
+2. Squash-merge it.
+3. CD fires a `cd` deploy, labels resolve to `[]`, no deletions → policy returns
+   `allow` → **deploys with no human gate**.
+
+> Tip: keep `ENV0_PRINT_POLICY_INPUT=true` during the demo so you can show the audience
+> `input.policyData.pr_labels` and the matching `allow`/`pending` output side by side.
+
+---
+
 ## How It Fits Together
 
 - The custom flow runs in `terraformPlan.after` and writes `policy_data.json` into
