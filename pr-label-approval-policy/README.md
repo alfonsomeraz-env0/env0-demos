@@ -161,6 +161,10 @@ endpoint, which returns the PR that contains that commit — labels included.
   policy-check step is a separate container that doesn't share `/tmp`.
 - env0 reads the file named by `ENV0_POLICY_DATA_PATH`, merges it into
   `input.policyData`, and provides `input.plan` and `input.deploymentRequest` automatically.
+- **Resume handling:** after a human approves, env0 re-evaluates the policy on a
+  `deployResume` / `destroyResume` pass. The hold conditions (label, deletions) are
+  still true then, so the policy detects the resume (`deploymentRequest.type` ends in
+  `Resume`) and returns `allow` — otherwise the deployment would loop: approve → re-hold.
 - The Rego reads all three and emits `allow` (auto-approve) or `pending` (hold).
 
 ## Extending

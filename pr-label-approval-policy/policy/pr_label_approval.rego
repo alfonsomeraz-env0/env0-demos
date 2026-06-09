@@ -10,13 +10,22 @@ import future.keywords.in
 # ===========================================================================
 # Dynamic PR Label-Driven Approval Policy
 #
-# Decision flow:
+# Decision flow (initial request):
 #   CI deploy + no "skip-approval" label + no deletions  -> auto-approve
 #   "skip-approval" label present                        -> hold for approval
 #   plan contains deletions                              -> hold for approval
-#   anything else (no allow rule fires)                  -> hold (env0 default)
+#   anything else                                        -> hold (env0 default)
+#
+# After a human approves, env0 RE-EVALUATES the policy on a "resume" pass
+# (deploymentRequest.type = deployResume / destroyResume). The hold conditions
+# (the label, the deletions) are still true on that pass, so without a guard
+# the policy would return `pending` again and the deployment would get stuck in
+# an approve -> re-hold loop. We therefore:
+#   * only apply the `pending` rules on the INITIAL request, and
+#   * explicitly `allow` on the resume pass (it was already approved).
 #
 # Inputs env0 provides automatically:
+#   input.deploymentRequest.type         - deploy | destroy | deployResume | destroyResume
 #   input.deploymentRequest.triggerName  - "cd" for CI, "manual"/"user" otherwise
 #   input.plan.resource_changes[]        - terraform plan, per-resource actions
 #   input.policyData.pr_labels[]         - injected by the env0.yaml custom flow
@@ -24,35 +33,48 @@ import future.keywords.in
 
 # --- Helpers ---------------------------------------------------------------
 
+# True on the post-approval re-evaluation (deployResume / destroyResume).
+is_resume if {
+	endswith(input.deploymentRequest.type, "Resume")
+}
+
 # True if the plan deletes (or replaces) any resource.
 has_deletions if {
-	some change in input.plan.resource_changes
-	"delete" in change.change.actions
+	input.plan.resource_changes[_].change.actions[_] == "delete"
 }
 
 # True if a given PR label is present.
 has_label(label) if {
-	some l in input.policyData.pr_labels
-	l == label
+	input.policyData.pr_labels[_] == label
 }
 
-# --- AUTO-APPROVE ----------------------------------------------------------
-# CI-triggered deploy, no skip-approval label, no deletions in the plan.
+# --- AUTO-APPROVE: already approved, resuming ------------------------------
+# Without this, a resume pass returns no result and env0 holds by default,
+# which is the approve -> re-hold loop.
 allow contains msg if {
+	is_resume
+	msg := "Deployment resumed after approval — proceeding ✅"
+}
+
+# --- AUTO-APPROVE: initial CI deploy, no skip label, no deletions ----------
+allow contains msg if {
+	not is_resume
 	input.deploymentRequest.triggerName == "cd"
 	not has_label("skip-approval")
 	not has_deletions
 	msg := "CI deploy, no deletions, no skip-approval label — auto-approved"
 }
 
-# --- HOLD: explicit label --------------------------------------------------
+# --- HOLD: explicit label (initial request only) ---------------------------
 pending contains msg if {
+	not is_resume
 	has_label("skip-approval")
 	msg := "PR label 'skip-approval' present — manual approval required"
 }
 
-# --- HOLD: destructive plan ------------------------------------------------
+# --- HOLD: destructive plan (initial request only) -------------------------
 pending contains msg if {
+	not is_resume
 	has_deletions
 	msg := "Plan includes resource deletions — manual approval required"
 }
