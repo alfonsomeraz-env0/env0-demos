@@ -8,11 +8,16 @@ version: 2
 # Runs in `terraformPlan.after` so the file exists before the approval policy
 # is evaluated (policies run after plan, before apply).
 #
+# IMPORTANT: write the file into the WORKING DIRECTORY (a relative path), not
+# /tmp. env0 runs the approval-policy check in a separate step from this one,
+# and only the working-directory volume is shared between steps — /tmp is not,
+# so a /tmp file yields "Failed to load dynamic policy data".
+#
 # Required env0 environment variables (set on the template or project):
 #   GITHUB_TOKEN   (sensitive)  - PAT with repo read access for label lookup
 #   GITHUB_ORG                  - e.g. "env0"
 #   GITHUB_REPO                 - e.g. "env0-demos"
-#   ENV0_POLICY_DATA_PATH       - path the policy reads, e.g. /tmp/policy_data.json
+#   ENV0_POLICY_DATA_PATH       - RELATIVE path the policy reads: policy_data.json
 # Optional for live demos (skips the API call and forces a label set):
 #   DEMO_PR_NUMBER              - hardcode a PR number
 #   DEMO_PR_LABELS              - JSON array, e.g. '["skip-approval"]'
@@ -26,7 +31,9 @@ deploy:
             #!/bin/bash
             set -e
 
-            OUT="${ENV0_POLICY_DATA_PATH:-/tmp/policy_data.json}"
+            # Default to a working-directory-relative file so it is shared with
+            # the policy-check step. Override with ENV0_POLICY_DATA_PATH if needed.
+            OUT="${ENV0_POLICY_DATA_PATH:-policy_data.json}"
 
             # --- Demo override: skip GitHub entirely and inject labels ---------
             if [ -n "$DEMO_PR_LABELS" ]; then

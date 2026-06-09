@@ -61,7 +61,7 @@ The `env0.yaml` in this folder is picked up automatically.
 | `GITHUB_TOKEN` | a PAT with repo read | **Mark as Sensitive** |
 | `GITHUB_ORG` | e.g. `env0` | repo owner |
 | `GITHUB_REPO` | e.g. `env0-demos` | repo name |
-| `ENV0_POLICY_DATA_PATH` | `/tmp/policy_data.json` | where the flow writes labels and the policy reads them |
+| `ENV0_POLICY_DATA_PATH` | `policy_data.json` | **relative** path in the working dir — `/tmp` is NOT shared between the plan step and the policy-check step |
 | `bucket_prefix` | a globally-unique prefix | Terraform var |
 
 > For a quick demo without GitHub wiring, set `DEMO_PR_LABELS` instead (see
@@ -115,10 +115,13 @@ You can drive all four matrix outcomes without touching GitHub by setting
 
 ## How It Fits Together
 
-- The custom flow runs in `terraformPlan.after`, so `/tmp/policy_data.json` exists
+- The custom flow runs in `terraformPlan.after` and writes `policy_data.json` into
+  the **working directory** — the volume env0 shares across steps — so it exists
   **before** the approval policy is evaluated (policies run after plan, before apply).
-- env0 merges that file into `input.policyData`, and provides `input.plan` and
-  `input.deploymentRequest` automatically.
+  Writing to `/tmp` instead causes `Failed to load dynamic policy data`, because the
+  policy-check step is a separate container that doesn't share `/tmp`.
+- env0 reads the file named by `ENV0_POLICY_DATA_PATH`, merges it into
+  `input.policyData`, and provides `input.plan` and `input.deploymentRequest` automatically.
 - The Rego reads all three and emits `allow` (auto-approve) or `pending` (hold).
 
 ## Extending
