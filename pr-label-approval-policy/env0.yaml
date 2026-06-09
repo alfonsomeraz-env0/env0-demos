@@ -39,7 +39,7 @@ deploy:
       after:
         - name: "Fetch PR Labels into policyData"
           run: |
-            #!/bin/bash
+            # POSIX sh — env0 runs this with /bin/sh, so no bash arrays/bashisms.
             set -e
 
             # Default to a working-directory-relative file so it is shared with
@@ -62,8 +62,17 @@ deploy:
             fi
 
             API="https://api.github.com/repos/$GITHUB_ORG/$GITHUB_REPO"
-            AUTH=(-H "Accept: application/vnd.github+json")
-            [ -n "$TOKEN" ] && AUTH+=(-H "Authorization: token $TOKEN")
+
+            # GitHub GET that adds the auth header only when a token is present.
+            gh() {
+              if [ -n "$TOKEN" ]; then
+                curl -sf -H "Accept: application/vnd.github+json" \
+                  -H "Authorization: token $TOKEN" "$1"
+              else
+                curl -sf -H "Accept: application/vnd.github+json" "$1"
+              fi
+            }
+
             LABELS=""
 
             # --- Resolve the PR number (explicit or PR-plan ref) --------------
@@ -75,14 +84,13 @@ deploy:
 
             if [ -n "$PR_NUMBER" ]; then
               echo "🔎 Reading labels from PR #$PR_NUMBER"
-              LABELS=$(curl -sf "${AUTH[@]}" "$API/issues/${PR_NUMBER}/labels" | jq -c '[.[].name]') || LABELS=""
+              LABELS=$(gh "$API/issues/${PR_NUMBER}/labels" | jq -c '[.[].name]') || LABELS=""
             else
               # --- CD on merge/push: find the PR that contains the deployed SHA -
               SHA="${DEMO_COMMIT_SHA:-$(git rev-parse HEAD 2>/dev/null || true)}"
               if [ -n "$SHA" ]; then
                 echo "🔎 Resolving PR for commit $SHA via commits/{sha}/pulls"
-                LABELS=$(curl -sf "${AUTH[@]}" "$API/commits/${SHA}/pulls" \
-                  | jq -c '[.[].labels[].name] | unique') || LABELS=""
+                LABELS=$(gh "$API/commits/${SHA}/pulls" | jq -c '[.[].labels[].name] | unique') || LABELS=""
               fi
             fi
 
