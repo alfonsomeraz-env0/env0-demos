@@ -22,6 +22,7 @@ resource "aws_s3_bucket" "app" {
     Environment = var.environment
     ManagedBy   = "env0"
     Demo        = "pr-label-approval-policy"
+    CostCenter  = "demo"
   }
 }
 
