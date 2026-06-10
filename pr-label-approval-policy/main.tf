@@ -26,6 +26,7 @@ resource "aws_s3_bucket" "app" {
     Team        = "platform"
     Project     = "masterclass"
     Lifecycle   = "active"
+    Compliance  = "review"
   }
 }
 
