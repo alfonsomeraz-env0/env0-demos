@@ -27,6 +27,7 @@ resource "aws_s3_bucket" "app" {
     Project     = "masterclass"
     Lifecycle   = "active"
     Compliance  = "review"
+    Owner       = "infra"
   }
 }
 
