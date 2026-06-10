@@ -28,6 +28,7 @@ resource "aws_s3_bucket" "app" {
     Lifecycle   = "active"
     Compliance  = "review"
     Owner       = "infra"
+    Tier        = "standard"
   }
 }
 
