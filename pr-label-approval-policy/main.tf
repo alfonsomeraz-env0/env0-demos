@@ -25,6 +25,7 @@ resource "aws_s3_bucket" "app" {
     CostCenter  = "demo"
     Team        = "platform"
     Project     = "masterclass"
+    Lifecycle   = "active"
   }
 }
 
