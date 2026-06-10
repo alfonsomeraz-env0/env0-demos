@@ -24,6 +24,7 @@ resource "aws_s3_bucket" "app" {
     Demo        = "pr-label-approval-policy"
     CostCenter  = "demo"
     Team        = "platform"
+    Compliance  = "review"
   }
 }
 
