@@ -1,28 +1,29 @@
-global:
-  domain: ""
+argo-cd:
+  global:
+    domain: ""
 
-configs:
-  params:
-    server.insecure: true
+  configs:
+    params:
+      server.insecure: true
 
-server:
-  replicas: 1
-  service:
-    type: LoadBalancer
-    annotations:
-      service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+  server:
+    replicas: 1
+    service:
+      type: LoadBalancer
+      annotations:
+        service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
 
-repoServer:
-  replicas: 1
+  repoServer:
+    replicas: 1
 
-applicationSet:
-  replicas: 1
+  applicationSet:
+    replicas: 1
 
-redis:
-  enabled: true
+  redis:
+    enabled: true
 
-dex:
-  enabled: false
+  dex:
+    enabled: false
 
-notifications:
-  enabled: false
+  notifications:
+    enabled: false

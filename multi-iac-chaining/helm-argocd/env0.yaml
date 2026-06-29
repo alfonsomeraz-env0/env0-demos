@@ -21,16 +21,15 @@ deploy:
             echo "================================================"
             echo "  SECURITY SCAN — Helm Lint"
             echo "================================================"
-            helm repo add argo https://argoproj.github.io/argo-helm --force-update
-            helm repo update
+            helm dependency update .
 
             echo ""
-            echo "--- Linting values.yaml against argo-cd chart ---"
-            helm lint argo/argo-cd -f values.yaml && echo "Lint passed." || true
+            echo "--- Linting values.yaml against chart ---"
+            helm lint . -f values.yaml && echo "Lint passed." || true
 
             echo ""
             echo "--- Dry-run template render (first 60 lines) ---"
-            helm template argocd argo/argo-cd \
+            helm template argocd . \
               --namespace argocd \
               -f values.yaml \
               | head -60
