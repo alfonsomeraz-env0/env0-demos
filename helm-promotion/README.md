@@ -1,16 +1,9 @@
 # helm-promotion
 
-Demonstrates env0's dev → prod Helm promotion pattern using the SaaS runner.
-
-- **dev** deploys automatically on every merge
-- **prod** requires a one-click approval gate before env0 triggers the upgrade
-
-The chart is a minimal nginx deployment. Swap it for any real chart — the workflow and approval pattern are the story.
-
-## How it works
+Self-contained demo: provisions a minimal EKS cluster, then promotes an nginx Helm chart from dev to prod with an approval gate — all via env0's SaaS runner.
 
 ```
-merge to main
+EKS Cluster (Terraform)
      │
      ▼
  [dev] helm upgrade ──── auto ────► deployed
@@ -22,36 +15,72 @@ merge to main
  [prod] helm upgrade ──────────────► deployed
 ```
 
-## env0 template settings
+## Templates to create in env0
 
-Create **two templates** in env0, both pointing at this directory:
+### helm-promotion-cluster
 
-| Setting           | helm-promotion-dev        | helm-promotion-prod       |
-|-------------------|--------------------------|--------------------------|
-| Template type     | Helm                     | Helm                     |
-| Working directory | `helm-promotion`         | `helm-promotion`         |
-| Namespace         | `nginx-dev`              | `nginx-prod`             |
-| Values file       | `values-dev.yaml`        | `values-prod.yaml`       |
-| Release name      | `nginx-demo`             | `nginx-demo`             |
+| Setting           | Value                          |
+|-------------------|-------------------------------|
+| Template type     | Terraform                     |
+| Working directory | `helm-promotion/cluster`      |
+| Revision          | `main`                        |
 
-## env0 variables to configure (both templates)
+Variables:
 
-| Variable          | Value                              | Sensitive |
-|-------------------|------------------------------------|-----------|
-| `KUBECONFIG_DATA` | base64-encoded kubeconfig          | Yes       |
-| `VALUES_FILE`     | `values-dev.yaml` / `values-prod.yaml` | No    |
-| `HELM_RELEASE_NAME` | `nginx-demo`                    | No        |
-| `HELM_NAMESPACE`  | `nginx-dev` / `nginx-prod`         | No        |
+| Key            | Value          |
+|----------------|----------------|
+| `region`       | `us-east-2`    |
+| `cluster_name` | `helm-promotion` |
 
-To encode your kubeconfig:
-```bash
-base64 -i ~/.kube/config | pbcopy
-```
+### helm-promotion-dev
 
-## What the environments deploy
+| Setting           | Value                    |
+|-------------------|--------------------------|
+| Template type     | Helm                     |
+| Working directory | `helm-promotion`         |
+| Namespace         | `nginx-dev`              |
+| Values file       | `values-dev.yaml`        |
+| Release name      | `nginx-demo`             |
 
-| | dev | prod |
-|---|---|---|
-| Replicas | 1 | 2 |
-| Service type | ClusterIP | LoadBalancer |
-| Namespace | `nginx-dev` | `nginx-prod` |
+Variables (set via workflow output from `cluster`):
+
+| Key                | Value                                       |
+|--------------------|---------------------------------------------|
+| `CLUSTER_NAME`     | `${env0-workflow:cluster:cluster_name}`     |
+| `AWS_REGION`       | `${env0-workflow:cluster:region}`           |
+| `VALUES_FILE`      | `values-dev.yaml`                           |
+| `HELM_RELEASE_NAME`| `nginx-demo`                                |
+| `HELM_NAMESPACE`   | `nginx-dev`                                 |
+
+### helm-promotion-prod
+
+Same as dev, with:
+
+| Setting     | Value              |
+|-------------|--------------------|
+| Namespace   | `nginx-prod`       |
+| Values file | `values-prod.yaml` |
+
+Variables:
+
+| Key                | Value                                       |
+|--------------------|---------------------------------------------|
+| `CLUSTER_NAME`     | `${env0-workflow:cluster:cluster_name}`     |
+| `AWS_REGION`       | `${env0-workflow:cluster:region}`           |
+| `VALUES_FILE`      | `values-prod.yaml`                          |
+| `HELM_RELEASE_NAME`| `nginx-demo`                                |
+| `HELM_NAMESPACE`   | `nginx-prod`                                |
+
+## What each environment deploys
+
+|             | dev         | prod          |
+|-------------|-------------|---------------|
+| Replicas    | 1           | 2             |
+| Service     | ClusterIP   | LoadBalancer  |
+| Namespace   | `nginx-dev` | `nginx-prod`  |
+
+## Cluster specs
+
+- EKS 1.30, single `t3.medium` node (scales to 2)
+- Public API endpoint (reachable from env0 SaaS runner)
+- No KMS, no CloudWatch logs — minimal footprint for demo

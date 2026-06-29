@@ -1,7 +1,13 @@
 environments:
+  cluster:
+    name: "EKS Cluster"
+    templateName: "helm-promotion-cluster"
+
   dev:
     name: "nginx — dev"
     templateName: "helm-promotion-dev"
+    needs:
+      - cluster
 
   prod:
     name: "nginx — prod"
