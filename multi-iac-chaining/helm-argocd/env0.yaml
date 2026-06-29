@@ -6,7 +6,10 @@ deploy:
       before:
         - name: Configure kubectl for EKS
           run: |
-            pip3 install awscli --quiet
+            if [ -z "$AWS_REGION" ] || [ -z "$CLUSTER_NAME" ]; then
+              echo "Workflow outputs not available during plan phase — skipping kubeconfig setup"
+              exit 0
+            fi
             aws eks update-kubeconfig \
               --region "$AWS_REGION" \
               --name "$CLUSTER_NAME"
@@ -15,7 +18,6 @@ deploy:
       before:
         - name: Configure kubectl for EKS
           run: |
-            pip3 install awscli --quiet
             aws eks update-kubeconfig \
               --region "$AWS_REGION" \
               --name "$CLUSTER_NAME"
@@ -127,7 +129,6 @@ destroy:
       before:
         - name: Configure kubectl for EKS
           run: |
-            pip3 install awscli --quiet
             aws eks update-kubeconfig \
               --region "$AWS_REGION" \
               --name "$CLUSTER_NAME"
