@@ -13,12 +13,6 @@ deploy:
 
     helmUpgrade:
       before:
-        - name: Install kubectl
-          run: |
-            curl -LO "https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-            chmod +x kubectl && mv kubectl /usr/local/bin/kubectl
-            kubectl version --client
-
         - name: Configure kubectl
           run: |
             aws eks update-kubeconfig --region "$AWS_REGION" --name "$CLUSTER_NAME"
@@ -52,11 +46,6 @@ destroy:
   steps:
     helmUninstall:
       before:
-        - name: Install kubectl
-          run: |
-            curl -LO "https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-            chmod +x kubectl && mv kubectl /usr/local/bin/kubectl
-
         - name: Configure kubectl
           run: |
             aws eks update-kubeconfig --region "$AWS_REGION" --name "$CLUSTER_NAME"
