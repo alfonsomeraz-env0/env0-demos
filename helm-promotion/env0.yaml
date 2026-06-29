@@ -6,7 +6,8 @@ deploy:
       before:
         - name: Configure kubectl
           run: |
-            if [ -z "$CLUSTER_NAME" ] || [ -z "$AWS_REGION" ]; then
+            if [ -z "$CLUSTER_NAME" ] || [ "$CLUSTER_NAME" = "null" ] || \
+               [ -z "$AWS_REGION" ]   || [ "$AWS_REGION" = "null" ]; then
               echo "Workflow outputs not available during plan phase — skipping kubeconfig setup"
               exit 0
             fi

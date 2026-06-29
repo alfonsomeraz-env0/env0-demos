@@ -6,7 +6,8 @@ deploy:
       before:
         - name: Configure kubectl for EKS
           run: |
-            if [ -z "$AWS_REGION" ] || [ -z "$CLUSTER_NAME" ]; then
+            if [ -z "$AWS_REGION" ]   || [ "$AWS_REGION" = "null" ] || \
+               [ -z "$CLUSTER_NAME" ] || [ "$CLUSTER_NAME" = "null" ]; then
               echo "Workflow outputs not available during plan phase — skipping kubeconfig setup"
               exit 0
             fi
