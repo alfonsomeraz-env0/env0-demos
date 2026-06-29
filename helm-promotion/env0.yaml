@@ -1,0 +1,57 @@
+version: 2
+
+deploy:
+  steps:
+    helmDiff:
+      before:
+        - name: Configure kubectl
+          run: |
+            if [ -z "$KUBECONFIG_DATA" ]; then
+              echo "KUBECONFIG_DATA not available during plan phase — skipping kubeconfig setup"
+              exit 0
+            fi
+            echo "$KUBECONFIG_DATA" | base64 -d > /tmp/kubeconfig
+            export KUBECONFIG=/tmp/kubeconfig
+            kubectl cluster-info
+
+    helmUpgrade:
+      before:
+        - name: Configure kubectl
+          run: |
+            echo "$KUBECONFIG_DATA" | base64 -d > /tmp/kubeconfig
+            export KUBECONFIG=/tmp/kubeconfig
+            echo "Connected to cluster:"
+            kubectl cluster-info
+
+        - name: Helm lint
+          run: |
+            helm lint . -f values.yaml -f "$VALUES_FILE" && echo "Lint passed."
+
+      after:
+        - name: Verify rollout
+          run: |
+            export KUBECONFIG=/tmp/kubeconfig
+            RELEASE_NAME=${HELM_RELEASE_NAME:-nginx-demo}
+            NAMESPACE=${HELM_NAMESPACE:-default}
+            echo "Waiting for rollout to complete..."
+            kubectl rollout status deployment \
+              -l app.kubernetes.io/instance="$RELEASE_NAME" \
+              -n "$NAMESPACE" \
+              --timeout=120s
+
+            echo ""
+            echo "--- Pods ---"
+            kubectl get pods -l app.kubernetes.io/instance="$RELEASE_NAME" -n "$NAMESPACE"
+
+            echo ""
+            echo "--- Service ---"
+            kubectl get svc -l app.kubernetes.io/instance="$RELEASE_NAME" -n "$NAMESPACE"
+
+destroy:
+  steps:
+    helmUninstall:
+      before:
+        - name: Configure kubectl
+          run: |
+            echo "$KUBECONFIG_DATA" | base64 -d > /tmp/kubeconfig
+            export KUBECONFIG=/tmp/kubeconfig

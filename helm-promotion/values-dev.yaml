@@ -1,0 +1,6 @@
+replicaCount: 1
+environment: dev
+
+service:
+  type: ClusterIP
+  port: 80

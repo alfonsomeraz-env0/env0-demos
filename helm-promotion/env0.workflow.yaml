@@ -1,0 +1,14 @@
+environments:
+  dev:
+    name: "nginx — dev"
+    templateName: "helm-promotion-dev"
+
+  prod:
+    name: "nginx — prod"
+    templateName: "helm-promotion-prod"
+    requiresApproval: true
+    needs:
+      - dev
+
+settings:
+  environmentRemovalStrategy: destroy

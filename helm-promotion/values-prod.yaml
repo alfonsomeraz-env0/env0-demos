@@ -1,0 +1,6 @@
+replicaCount: 2
+environment: prod
+
+service:
+  type: LoadBalancer
+  port: 80
