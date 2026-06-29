@@ -19,6 +19,10 @@ deploy:
             echo "Cluster nodes:"
             kubectl get nodes
 
+        - name: Create namespace
+          run: |
+            kubectl create namespace "$HELM_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+
         - name: Helm lint
           run: |
             helm lint . -f values.yaml -f "$VALUES_FILE" && echo "Lint passed."
