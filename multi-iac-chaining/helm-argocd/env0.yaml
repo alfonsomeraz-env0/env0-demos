@@ -2,7 +2,7 @@ version: 2
 
 deploy:
   steps:
-    helmInstall:
+    helmUpgrade:
       before:
         - name: Configure kubectl for EKS
           run: |
@@ -114,7 +114,7 @@ deploy:
 
 destroy:
   steps:
-    helmDestroy:
+    helmUninstall:
       before:
         - name: Configure kubectl for EKS
           run: |
