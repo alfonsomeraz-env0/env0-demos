@@ -42,15 +42,15 @@ Variables:
 | Values file       | `values-dev.yaml`        |
 | Release name      | `nginx-demo`             |
 
-Variables (set via workflow output from `cluster`):
+Variables — `VALUES_FILE`, `HELM_RELEASE_NAME`, and `HELM_NAMESPACE` are plain text. `CLUSTER_NAME` and `AWS_REGION` must be added as **Workflow Output** type variables in the env0 UI (click the variable type dropdown → Environment Output, then select the source sub-environment and output name):
 
-| Key                | Value                                       |
-|--------------------|---------------------------------------------|
-| `CLUSTER_NAME`     | `${env0-workflow:cluster:cluster_name}`     |
-| `AWS_REGION`       | `${env0-workflow:cluster:region}`           |
-| `VALUES_FILE`      | `values-dev.yaml`                           |
-| `HELM_RELEASE_NAME`| `nginx-demo`                                |
-| `HELM_NAMESPACE`   | `nginx-dev`                                 |
+| Key                | Type             | Source                        |
+|--------------------|------------------|-------------------------------|
+| `CLUSTER_NAME`     | Workflow Output  | `cluster` → `cluster_name`    |
+| `AWS_REGION`       | Workflow Output  | `cluster` → `region`          |
+| `VALUES_FILE`      | Plain text       | `values-dev.yaml`             |
+| `HELM_RELEASE_NAME`| Plain text       | `nginx-demo`                  |
+| `HELM_NAMESPACE`   | Plain text       | `nginx-dev`                   |
 
 ### helm-promotion-prod
 
@@ -63,13 +63,13 @@ Same as dev, with:
 
 Variables:
 
-| Key                | Value                                       |
-|--------------------|---------------------------------------------|
-| `CLUSTER_NAME`     | `${env0-workflow:cluster:cluster_name}`     |
-| `AWS_REGION`       | `${env0-workflow:cluster:region}`           |
-| `VALUES_FILE`      | `values-prod.yaml`                          |
-| `HELM_RELEASE_NAME`| `nginx-demo`                                |
-| `HELM_NAMESPACE`   | `nginx-prod`                                |
+| Key                | Type             | Source                        |
+|--------------------|------------------|-------------------------------|
+| `CLUSTER_NAME`     | Workflow Output  | `cluster` → `cluster_name`    |
+| `AWS_REGION`       | Workflow Output  | `cluster` → `region`          |
+| `VALUES_FILE`      | Plain text       | `values-prod.yaml`            |
+| `HELM_RELEASE_NAME`| Plain text       | `nginx-demo`                  |
+| `HELM_NAMESPACE`   | Plain text       | `nginx-prod`                  |
 
 ## What each environment deploys
 
