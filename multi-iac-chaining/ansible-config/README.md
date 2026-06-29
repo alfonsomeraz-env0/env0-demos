@@ -16,12 +16,14 @@ Post-deployment Kubernetes configuration via Ansible. Runs after Argo CD is inst
 
 ## env0 variables to configure
 
-Passed in as environment outputs from upstream workflow environments:
+Set these on the **Ansible Config template** in the env0 UI using the workflow output syntax:
 
-| Variable | Source | Description |
+| Variable | Value to set in env0 UI | Description |
 |---|---|---|
-| `CLUSTER_NAME` | `terraform-eks` output `cluster_name` | EKS cluster name for kubeconfig |
-| `AWS_REGION` | `terraform-eks` output `region` | AWS region |
+| `CLUSTER_NAME` | `${env0-workflow:eks-cluster:cluster_name}` | EKS cluster name for kubeconfig |
+| `AWS_REGION` | `${env0-workflow:eks-cluster:region}` | AWS region |
+
+> **Note:** The alias `eks-cluster` must match the key in `env0.workflow.yaml`. The upstream environment must have been deployed at least once before the value resolves.
 
 ## Dependencies
 
