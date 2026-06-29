@@ -2,6 +2,14 @@ version: 2
 
 deploy:
   steps:
+    helmDiff:
+      before:
+        - name: Configure kubectl for EKS
+          run: |
+            aws eks update-kubeconfig \
+              --region "$AWS_REGION" \
+              --name "$CLUSTER_NAME"
+
     helmUpgrade:
       before:
         - name: Configure kubectl for EKS
