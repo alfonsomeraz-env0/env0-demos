@@ -6,12 +6,10 @@ deploy:
       before:
         - name: Configure kubectl
           run: |
-            if [ -z "$CLUSTER_NAME" ] || [ "$CLUSTER_NAME" = "null" ] || \
-               [ -z "$AWS_REGION" ]   || [ "$AWS_REGION" = "null" ]; then
-              echo "Workflow outputs not available during plan phase — skipping kubeconfig setup"
+            aws eks update-kubeconfig --region "$AWS_REGION" --name "$CLUSTER_NAME" 2>/dev/null || {
+              echo "Cluster not reachable — skipping kubeconfig setup for plan phase"
               exit 0
-            fi
-            aws eks update-kubeconfig --region "$AWS_REGION" --name "$CLUSTER_NAME"
+            }
 
     helmUpgrade:
       before:
