@@ -1,0 +1,36 @@
+version: 2
+
+deploy:
+  steps:
+    terraformApply:
+      before:
+        - name: "Pre-migration inventory"
+          run: |
+            #!/bin/bash
+            set -e
+            chmod +x scripts/inventory-remote-backend-envs.sh
+            if [ -z "${ENV0_API_KEY:-}" ] || [ -z "${ENV0_ORGANIZATION_ID:-}" ]; then
+              echo "Skipping inventory — set ENV0_API_KEY and ENV0_ORGANIZATION_ID on this environment to enable it."
+              exit 0
+            fi
+            echo "Remote-backend environments in scope, by project:"
+            ./scripts/inventory-remote-backend-envs.sh
+        - name: "Cutover checklist reminder"
+          run: |
+            cat <<'EOF'
+            Before this bucket goes live as your org's remote state backend:
+              1. Back up every in-scope state file (terraform state pull > backup.tfstate, or via the env0 API)
+              2. Freeze/lock in-scope environments in env0 so no deploys queue during cutover
+              3. Have the inventory above ready — env0 support will reconcile against it
+            EOF
+      after:
+        - name: "Print outputs for env0 support"
+          run: |
+            #!/bin/bash
+            set -e
+            echo ""
+            echo "Send these four values to support@env0.com to enable self-hosted remote state:"
+            echo "  role_arn:    $(terraform output -raw role_arn)"
+            echo "  external_id: $(terraform output -raw external_id)"
+            echo "  region:      $(terraform output -raw region)"
+            echo "  bucket_name: $(terraform output -raw bucket_name)"

@@ -1,0 +1,26 @@
+version: 2
+
+deploy:
+  steps:
+    terraformApply:
+      after:
+        - name: "Print backend config + migration steps"
+          run: |
+            #!/bin/bash
+            set -e
+            echo "S3 bucket:      $(terraform output -raw bucket_name)"
+            echo "DynamoDB table: $(terraform output -raw dynamodb_table_name 2>/dev/null || echo 'none — using S3-native locking')"
+            echo "Region:         $(terraform output -raw aws_region)"
+            echo ""
+            echo "Backend block to paste into each environment you're migrating off the env0 remote backend:"
+            terraform output backend_config_snippet
+            echo ""
+            echo "Per-environment migration steps (env0 docs — Migrating State):"
+            echo "  1. Add the block above alongside the env0 remote backend so Terraform can see both"
+            echo "  2. terraform login backend.api.env0.com   (provide your env0 token)"
+            echo "  3. terraform plan   — confirm you're targeting the right environment"
+            echo "  4. terraform state pull > backup.state   (recommended)"
+            echo "  5. Replace the env0 backend block with the s3 backend block above"
+            echo "  6. terraform init -migrate-state   (answer yes)"
+            echo "  7. terraform plan   — expect zero changes"
+            echo "  8. Mark the env0 environment inactive once validated"

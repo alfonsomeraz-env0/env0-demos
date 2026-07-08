@@ -42,6 +42,13 @@ Each folder is a standalone demo — import it into env0 as a template and deplo
 | [`pr-label-approval-policy/`](./pr-label-approval-policy/README.md) | Custom flow + OPA approval policy — auto-approve CI deploys, hold on PR label or deletions |
 | [`cloudformation/`](./cloudformation/README.md) | CloudFormation via env0 — shows IaC-tool agnosticism |
 
+### State Migration
+
+| Demo | Description |
+|---|---|
+| [`state-migration-self-hosted/`](./state-migration-self-hosted/README.md) | Deploys env0's `remote-state-bucket-module` — customer-owned S3 bucket, env0 still runs the backend |
+| [`state-migration-s3-dynamodb/`](./state-migration-s3-dynamodb/README.md) | Standalone Terraform S3 + DynamoDB backend — leaves the env0 remote backend entirely |
+
 ### Terragrunt
 
 | Demo | Description |
@@ -120,6 +127,8 @@ env0-demos/
 ├── custom-flows/               # Custom flow examples
 ├── pr-label-approval-policy/   # Custom flow + OPA approval policy (PR labels)
 ├── cloudformation/             # CloudFormation
+├── state-migration-self-hosted/  # env0 self-hosted remote state (customer S3, env0 backend)
+├── state-migration-s3-dynamodb/  # Standalone Terraform S3 + DynamoDB backend
 ├── terragrunt/                 # Terragrunt config
 ├── terragrunt-bootstrap/       # Terragrunt state backend
 ├── multi-tier-workflow/        # env0 Workflow — full stack
