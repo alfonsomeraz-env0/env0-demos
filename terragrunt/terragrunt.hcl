@@ -4,6 +4,20 @@ locals {
   project     = "demo-env0"
 }
 
+remote_state {
+  backend = "s3"
+  generate = {
+    path      = "backend.tf"
+    if_exists = "overwrite_terragrunt"
+  }
+  config = {
+    bucket         = "demo-env0-terragrunt-state"
+    key            = "${path_relative_to_include()}/terraform.tfstate"
+    region         = local.aws_region
+    encrypt        = true
+    dynamodb_table = "demo-env0-terragrunt-lock"
+  }
+}
 
 generate "provider" {
   path      = "provider.tf"
