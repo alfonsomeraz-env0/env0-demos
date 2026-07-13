@@ -4,6 +4,13 @@ locals {
   project     = "demo-env0"
 }
 
+terraform {
+  extra_arguments "migrate_state" {
+    commands  = ["init"]
+    arguments = ["-migrate-state", "-force-copy"]
+  }
+}
+
 remote_state {
   backend = "s3"
   generate = {
