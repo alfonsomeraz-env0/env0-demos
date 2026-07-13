@@ -19,7 +19,7 @@ remote_state {
   }
   config = {
     bucket         = "demo-env0-terragrunt-state"
-    key            = "${path_relative_to_include()}/terraform.tfstate"
+    key            = "${local.environment}/terraform.tfstate"
     region         = local.aws_region
     encrypt        = true
     dynamodb_table = "demo-env0-terragrunt-lock"
