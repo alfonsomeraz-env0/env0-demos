@@ -1,0 +1,19 @@
+environments:
+  data:
+    name: "SageMaker Data Bucket"
+    templateName: "sagemaker-workflow-data"
+
+  network:
+    name: "SageMaker Network"
+    templateName: "sagemaker-workflow-network"
+
+  notebook:
+    name: "SageMaker Notebook"
+    templateName: "sagemaker-notebook"
+    requiresApproval: true
+    needs:
+      - data
+      - network
+
+settings:
+  environmentRemovalStrategy: destroy

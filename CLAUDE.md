@@ -58,6 +58,8 @@ settings:
   environmentRemovalStrategy: destroy
 ```
 
+There is no `variables` key. Passing one stage's output into another is configured on the workflow template as an **Environment Output** variable (project policy `Environment Outputs` must be enabled). Those values are strings only, so `jsonencode()` any output feeding a `list`/`map` input — OpenTofu parses the JSON string back into the right type. `templateName` can be swapped for an inline `vcs: {type, repository, path}` block to skip creating templates.
+
 ## Repository Structure
 
 ```
@@ -81,7 +83,8 @@ env0-demos/
 ├── terragrunt-bootstrap/       # Creates S3 + DynamoDB state backend
 ├── multi-tier-workflow/        # env0.workflow.yaml: VPC → DB → SG → EC2
 ├── terragrunt-workflow/        # env0.workflow.yaml: bootstrap → deploy
-└── eks-workflow/               # env0.workflow.yaml: infra → apps with approval gate
+├── eks-workflow/               # env0.workflow.yaml: infra → apps with approval gate
+└── sagemaker-workflow/         # env0.workflow.yaml: data + network (parallel) → gated notebook
 ```
 
 ## Module Dependency Order (full-stack `terraform/`)

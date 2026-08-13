@@ -69,6 +69,7 @@ Each folder is a standalone demo — import it into env0 as a template and deplo
 | [`multi-tier-workflow/`](./multi-tier-workflow/README.md) | Four-stage full-stack workflow: VPC → SG → S3 → EC2 with dependency ordering |
 | [`terragrunt-workflow/`](./terragrunt-workflow/README.md) | Two-stage workflow: bootstrap state backend, then deploy Terragrunt stack |
 | [`eks-workflow/`](./eks-workflow/README.md) | Multi-stage EKS workflow: infrastructure then applications, with approval gate |
+| [`sagemaker-workflow/`](./sagemaker-workflow/README.md) | OpenTofu fan-in workflow: data bucket + network in parallel, then a gated SageMaker notebook |
 
 ### Coming Soon
 
@@ -97,7 +98,7 @@ Serverless    serverless-api (API Gateway + Lambda + DynamoDB)
 OpenTofu      sagemaker (notebook instance, OpenTofu instead of Terraform)
 AWS Core      aws-core/ec2-ansible → aws-core/ecs-fargate → aws-core/vpc-rds
 Advanced      custom-flows → cloudformation
-Workflows     multi-tier-workflow → terragrunt-workflow → eks-workflow
+Workflows     multi-tier-workflow → terragrunt-workflow → eks-workflow → sagemaker-workflow
 ```
 
 ---
@@ -142,6 +143,9 @@ env0-demos/
 ├── multi-tier-workflow/        # env0 Workflow — full stack
 ├── terragrunt-workflow/        # env0 Workflow — Terragrunt
 ├── eks-workflow/               # env0 Workflow — EKS
+├── sagemaker-workflow/         # env0 Workflow — OpenTofu SageMaker (data + network → notebook)
+│   ├── data/
+│   └── network/
 └── mcp/                        # Coming soon
 ```
 
