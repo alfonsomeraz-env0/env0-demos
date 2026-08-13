@@ -78,9 +78,35 @@ A notebook instance bills for **every hour it is `InService`**, whether anyone i
 
 ## Auto-Shutdown
 
-`scripts/on-start.sh` is rendered with `templatefile`, base64-encoded, and attached as the notebook's lifecycle configuration. On every start it writes a small Python script and a `*/5 * * * *` cron entry. The script queries the local Jupyter API (`https://localhost:8443/api/sessions`), and if every kernel reports `idle` with a `last_activity` older than the timeout, it calls `sagemaker:StopNotebookInstance` on itself. Logs land in `/var/log/notebook-autostop.log` on the instance.
+`scripts/on-start.sh` is rendered with `templatefile`, base64-encoded, and attached as the notebook's lifecycle configuration. On every start it writes a small Python script and a `*/5 * * * *` cron entry. Logs land in `/var/log/notebook-autostop.log` on the instance.
+
+Each run asks the local Jupyter API (`https://localhost:8443/api/`) for three things and takes the **most recent** of them as the last activity:
+
+| Signal | Endpoint | Why |
+|---|---|---|
+| Server start time | `status.started` | Floor — gives a notebook nobody has opened yet a full idle window instead of stopping it on the first tick after boot |
+| Kernel activity | `sessions[].kernel.last_activity` | Normal notebook use |
+| Terminal activity | `terminals[].last_activity` | Terminal-only sessions with no kernel |
+
+It stops the instance only if that most recent activity is older than the timeout. A `busy` kernel always blocks shutdown, and an unreachable Jupyter API leaves the notebook running rather than guessing.
+
+The server's own `last_activity` field is deliberately unused: Jupyter refreshes it on authenticated API requests, so the script's polling could keep resetting it and prevent shutdown entirely.
+
+Open connections are ignored — an abandoned browser tab does not keep the instance alive. Editing files without ever starting a kernel or terminal is the one case that can still be cut short; opening a notebook creates a kernel, which is tracked.
 
 To edit the timeout, change `idle_timeout_minutes` and redeploy — the lifecycle config is replaced and the notebook picks it up on its next start.
+
+### Restarting a Stopped Notebook
+
+Auto-shutdown stops the instance, it does not delete it. The volume, files, and lifecycle config survive:
+
+```bash
+aws sagemaker start-notebook-instance --notebook-instance-name dev-demo-notebook --region us-east-1
+aws sagemaker wait notebook-instance-in-service --notebook-instance-name dev-demo-notebook --region us-east-1
+aws sagemaker create-presigned-notebook-instance-url --notebook-instance-name dev-demo-notebook --region us-east-1
+```
+
+`create-presigned-notebook-instance-url` fails with `NotebookInstance must be in InService state` while the instance is stopped — start it first.
 
 ## VPC Mode
 

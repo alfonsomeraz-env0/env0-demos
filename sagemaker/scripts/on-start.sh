@@ -35,10 +35,16 @@ SSL_CTX.check_hostname = False
 SSL_CTX.verify_mode = ssl.CERT_NONE
 
 
-def jupyter(path):
+def jupyter(path, default=None):
     request = urllib.request.Request(JUPYTER_API + path)
-    with urllib.request.urlopen(request, context=SSL_CTX, timeout=10) as response:
-        return json.load(response)
+    try:
+        with urllib.request.urlopen(request, context=SSL_CTX, timeout=10) as response:
+            return json.load(response)
+    except Exception as err:
+        if default is None:
+            raise
+        print("GET %s failed (%s) — treating as %r" % (path, err, default))
+        return default
 
 
 def seconds_since(timestamp):
@@ -47,32 +53,60 @@ def seconds_since(timestamp):
     if "." not in normalized:
         normalized = normalized.replace("+00:00", ".000000+00:00")
     parsed = datetime.strptime(normalized, "%Y-%m-%dT%H:%M:%S.%f%z")
-    return (datetime.now(timezone.utc) - parsed).total_seconds()
+    return max(0.0, (datetime.now(timezone.utc) - parsed).total_seconds())
 
 
-def is_idle():
-    sessions = jupyter("sessions")
-    if not sessions:
-        return True
-
+def busy_kernel(sessions):
     for session in sessions:
-        kernel = session.get("kernel", {})
-        if kernel.get("execution_state") != "idle":
-            return False
-        if seconds_since(kernel["last_activity"]) < IDLE_SECONDS:
-            return False
+        state = session.get("kernel", {}).get("execution_state")
+        if state and state != "idle":
+            return True
+    return False
 
-    return True
+
+def seconds_since_last_activity(status, sessions, terminals):
+    """Age of the most recent activity on the instance.
+
+    The server's own start time is included as a floor. Without it, a notebook
+    that nobody has opened yet reports no sessions and no kernels, which reads
+    as "idle forever" and gets the instance stopped on the first cron tick
+    after boot. With it, a fresh notebook gets a full idle window.
+
+    Deliberately does not use the server's `last_activity` field: Jupyter
+    refreshes that on authenticated API requests, so this script's own polling
+    could keep resetting it and silently prevent shutdown altogether.
+    """
+    stamps = [status["started"]]
+    stamps += [s["kernel"]["last_activity"] for s in sessions if s.get("kernel")]
+    stamps += [t["last_activity"] for t in terminals if t.get("last_activity")]
+
+    return min(seconds_since(stamp) for stamp in stamps)
 
 
 def main():
-    if not is_idle():
+    try:
+        status = jupyter("status")
+        sessions = jupyter("sessions")
+    except Exception as err:
+        print("Jupyter API unreachable (%s) — leaving the notebook running" % err)
+        return 0
+
+    # Terminals can be disabled outright, so a failure here is not fatal.
+    terminals = jupyter("terminals", default=[])
+
+    if busy_kernel(sessions):
+        print("a kernel is busy — leaving the notebook running")
+        return 0
+
+    idle_for = seconds_since_last_activity(status, sessions, terminals)
+    if idle_for < IDLE_SECONDS:
+        print("last activity %ds ago, under the %ds limit" % (idle_for, IDLE_SECONDS))
         return 0
 
     with open(METADATA) as handle:
         name = json.load(handle)["ResourceName"]
 
-    print("kernels idle for over %ds — stopping %s" % (IDLE_SECONDS, name))
+    print("idle for %ds (limit %ds) — stopping %s" % (idle_for, IDLE_SECONDS, name))
     subprocess.run(
         ["aws", "sagemaker", "stop-notebook-instance", "--notebook-instance-name", name],
         check=True,
