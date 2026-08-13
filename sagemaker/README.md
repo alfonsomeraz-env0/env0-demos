@@ -16,7 +16,10 @@ Provisions an Amazon SageMaker notebook instance with **OpenTofu**, managed thro
 |---|---|
 | **IaC Type** | OpenTofu |
 | **OpenTofu Version** | >= 1.6.0 |
+| **AWS Provider** | >= 6.19.0 |
 | **Working Directory** | `sagemaker` |
+
+> **Provider floor matters here.** `notebook-al2023-v1` was only added to the AWS provider's `platform_identifier` validation in **6.19.0**; the 5.x line rejects it before the API is ever called. If you must stay on an older provider, set `platform_identifier = "notebook-al2-v3"`.
 
 Custom flow format is identical between Terraform and OpenTofu, so `env0.yaml` still uses the `terraformInit` / `terraformApply` / `terraformDestroy` step names. The hooks resolve `tofu` or `terraform` at runtime, so the same file works under either IaC type.
 
@@ -29,7 +32,7 @@ Custom flow format is identical between Terraform and OpenTofu, so `env0.yaml` s
 | `notebook_name` | string | `demo-notebook` | No | Notebook name (suffix after the environment prefix) |
 | `instance_type` | string | `ml.t3.medium` | No | ML compute instance type |
 | `volume_size` | number | `5` | No | ML storage volume size in GB (5–16384) |
-| `platform_identifier` | string | `notebook-al2023-v1` | No | Notebook runtime platform |
+| `platform_identifier` | string | `notebook-al2023-v1` | No | Notebook runtime platform (needs AWS provider >= 6.19.0) |
 | `root_access` | string | `Disabled` | No | Root access for notebook users |
 | `direct_internet_access` | string | `Enabled` | No | SageMaker-provided internet access |
 | `subnet_id` | string | `""` | No | Attach to your own VPC instead of the SageMaker-managed network |

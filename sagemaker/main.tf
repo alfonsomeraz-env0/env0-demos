@@ -3,8 +3,10 @@ terraform {
 
   required_providers {
     aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
+      source = "hashicorp/aws"
+      # 6.19.0 is the first release that accepts notebook-al2023-v1 as a
+      # platform_identifier — the 5.x line rejects it outright.
+      version = "~> 6.19"
     }
   }
 }

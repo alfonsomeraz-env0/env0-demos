@@ -39,7 +39,7 @@ variable "volume_size" {
 }
 
 variable "platform_identifier" {
-  description = "Notebook runtime platform"
+  description = "Notebook runtime platform. notebook-al2023-v1 requires AWS provider >= 6.19.0; on older providers use notebook-al2-v3."
   type        = string
   default     = "notebook-al2023-v1"
 
