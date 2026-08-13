@@ -69,6 +69,7 @@ env0-demos/
 │   ├── ec2-ansible/            #   Terraform + Ansible (env0.yaml chains ansible-playbook after apply)
 │   ├── ecs-fargate/            #   ECS Fargate + ALB + ECR
 │   └── vpc-rds/                #   Two-tier VPC + private RDS
+├── sagemaker/                  # OpenTofu — SageMaker notebook + KMS + idle auto-shutdown LCC
 ├── s3-bucket/                  # Standalone Terraform modules (beginner → intermediate)
 ├── ec2/
 ├── vpc/

@@ -1,6 +1,6 @@
 # env0 Demos
 
-A collection of Infrastructure-as-Code demos for the **env0 platform**, covering Terraform, Terragrunt, CloudFormation, Ansible, and env0 Workflows across a range of real-world patterns.
+A collection of Infrastructure-as-Code demos for the **env0 platform**, covering Terraform, OpenTofu, Terragrunt, CloudFormation, Ansible, and env0 Workflows across a range of real-world patterns.
 
 Each folder is a standalone demo — import it into env0 as a template and deploy.
 
@@ -22,6 +22,12 @@ Each folder is a standalone demo — import it into env0 as a template and deplo
 | Demo | Description |
 |---|---|
 | [`serverless-api/`](./serverless-api/README.md) | HTTP API (API Gateway + Lambda + DynamoDB) — realistic app, near-zero cost, great for PR bot demos |
+
+### OpenTofu
+
+| Demo | Description |
+|---|---|
+| [`sagemaker/`](./sagemaker/README.md) | SageMaker notebook instance — KMS-encrypted volume, IMDSv2, idle auto-shutdown |
 
 ### Terraform Modules
 
@@ -88,6 +94,7 @@ Each folder is a standalone demo — import it into env0 as a template and deplo
 Beginner      s3-bucket → vpc → ec2
 Intermediate  security-group → iam-role → terraform (full stack)
 Serverless    serverless-api (API Gateway + Lambda + DynamoDB)
+OpenTofu      sagemaker (notebook instance, OpenTofu instead of Terraform)
 AWS Core      aws-core/ec2-ansible → aws-core/ecs-fargate → aws-core/vpc-rds
 Advanced      custom-flows → cloudformation
 Workflows     multi-tier-workflow → terragrunt-workflow → eks-workflow
@@ -99,7 +106,7 @@ Workflows     multi-tier-workflow → terragrunt-workflow → eks-workflow
 
 All demos target AWS. You'll need:
 - AWS credentials configured in env0 (IAM user or OIDC role)
-- Sufficient permissions for the resources each demo creates (EC2, ECS, RDS, S3, VPC, IAM, Lambda, API Gateway, DynamoDB, CloudFormation)
+- Sufficient permissions for the resources each demo creates (EC2, ECS, RDS, S3, VPC, IAM, Lambda, API Gateway, DynamoDB, CloudFormation, SageMaker, KMS)
 
 ---
 
@@ -112,6 +119,7 @@ env0-demos/
 │   ├── ecs-fargate/            #   ECS Fargate + ALB + ECR
 │   └── vpc-rds/                #   VPC + private RDS
 ├── serverless-api/             # Serverless — API Gateway + Lambda + DynamoDB
+├── sagemaker/                  # OpenTofu — SageMaker notebook instance
 ├── s3-bucket/                  # Terraform — S3 bucket
 ├── ec2/                        # Terraform — EC2 instance
 ├── vpc/                        # Terraform — VPC + networking

@@ -1,0 +1,33 @@
+version: 2
+
+deploy:
+  steps:
+    terraformInit:
+      before:
+        - name: Show IaC binary
+          run: |
+            IAC=$(command -v tofu || command -v terraform)
+            echo "Running with: $IAC"
+            "$IAC" version
+    terraformApply:
+      after:
+        - name: Notebook info and cost reminder
+          run: |
+            IAC=$(command -v tofu || command -v terraform)
+            echo "Notebook:   $("$IAC" output -raw notebook_instance_name)"
+            echo "Role:       $("$IAC" output -raw execution_role_arn)"
+            echo "Open with:  $("$IAC" output -raw open_notebook_command)"
+            echo ""
+            echo "Cost reminder: a notebook instance bills for every hour it is InService."
+            echo "ml.t3.medium is roughly \$0.05/hr in us-east-1 — about \$36/month if left running."
+            echo "The auto-shutdown lifecycle config stops it once kernels go idle, but"
+            echo "destroy the environment (or set a TTL in env0) when you are done."
+
+destroy:
+  steps:
+    terraformDestroy:
+      before:
+        - name: Confirm destroy
+          run: |
+            echo "Destroying SageMaker notebook in $ENV0_ENVIRONMENT_NAME..."
+            echo "Note: any customer-managed KMS key enters a 7-day deletion window."
