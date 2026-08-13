@@ -11,17 +11,48 @@ deploy:
             "$IAC" version
     terraformApply:
       after:
-        - name: Notebook info and cost reminder
+        - name: How to open the notebook
           run: |
             IAC=$(command -v tofu || command -v terraform)
-            echo "Notebook:   $("$IAC" output -raw notebook_instance_name)"
-            echo "Role:       $("$IAC" output -raw execution_role_arn)"
-            echo "Open with:  $("$IAC" output -raw open_notebook_command)"
+            NOTEBOOK=$("$IAC" output -raw notebook_instance_name)
+            REGION=$("$IAC" output -raw aws_region)
+            LCC=$("$IAC" output -raw lifecycle_config_name 2>/dev/null || echo "")
+
+            echo "Notebook:  $NOTEBOOK"
+            echo "Role:      $("$IAC" output -raw execution_role_arn)"
+
+            # Deliberately not generating the presigned URL here — it is a
+            # credential that grants Jupyter access, and deployment logs are
+            # visible to everyone with access to the env0 environment.
+            if command -v aws >/dev/null 2>&1; then
+              STATUS=$(aws sagemaker describe-notebook-instance \
+                --notebook-instance-name "$NOTEBOOK" --region "$REGION" \
+                --query NotebookInstanceStatus --output text 2>/dev/null || echo "unknown")
+              echo "Status:    $STATUS"
+            fi
+
+            echo ""
+            echo "Open Jupyter (instance must be InService):"
+            echo "  aws sagemaker create-presigned-notebook-instance-url \\"
+            echo "    --notebook-instance-name $NOTEBOOK --region $REGION"
+
+            if [ -n "$LCC" ]; then
+              echo ""
+              echo "Auto-shutdown is on ($LCC) — the notebook stops itself once its"
+              echo "kernels go idle. create-presigned-notebook-instance-url fails with"
+              echo "\"NotebookInstance must be in InService state\" while it is stopped."
+              echo "Start it again first:"
+              echo "  aws sagemaker start-notebook-instance \\"
+              echo "    --notebook-instance-name $NOTEBOOK --region $REGION"
+              echo "  aws sagemaker wait notebook-instance-in-service \\"
+              echo "    --notebook-instance-name $NOTEBOOK --region $REGION"
+            fi
+
             echo ""
             echo "Cost reminder: a notebook instance bills for every hour it is InService."
             echo "ml.t3.medium is roughly \$0.05/hr in us-east-1 — about \$36/month if left running."
-            echo "The auto-shutdown lifecycle config stops it once kernels go idle, but"
-            echo "destroy the environment (or set a TTL in env0) when you are done."
+            echo "Stopping it stops the compute charge; destroy the environment (or set a"
+            echo "TTL in env0) to stop paying for the volume and KMS key too."
 
 destroy:
   steps:

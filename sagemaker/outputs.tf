@@ -13,6 +13,11 @@ output "notebook_url" {
   value       = aws_sagemaker_notebook_instance.this.url
 }
 
+output "aws_region" {
+  description = "Region the notebook lives in — needed by every SageMaker CLI call against it"
+  value       = var.aws_region
+}
+
 output "name_suffix" {
   description = "Suffix applied to every resource name (empty when neither unique_suffix nor append_random_suffix is used)"
   value       = local.suffix

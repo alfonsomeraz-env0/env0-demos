@@ -129,7 +129,11 @@ To edit the timeout, change `idle_timeout_minutes` and redeploy — the lifecycl
 
 ### Restarting a Stopped Notebook
 
-Auto-shutdown stops the instance, it does not delete it. The volume, files, and lifecycle config survive:
+Auto-shutdown stops the instance, it does not delete it. The volume, files, and lifecycle config survive.
+
+`env0.yaml` prints this whole sequence — with the resolved instance name already substituted — in the deploy log after every apply, alongside the notebook's live status. So the commands are there when you come back to a stopped notebook, no need to look them up here.
+
+The flow deliberately does **not** generate the presigned URL itself: that URL is a credential granting Jupyter access, and deploy logs are visible to everyone with access to the env0 environment. It prints the command for you to run instead.
 
 ```bash
 NOTEBOOK=$(tofu output -raw notebook_instance_name)   # or copy it from the env0 outputs
