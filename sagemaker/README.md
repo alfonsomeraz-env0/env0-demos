@@ -14,10 +14,12 @@ Provisions an Amazon SageMaker notebook instance with **OpenTofu**, managed thro
 
 | Field | Value |
 |---|---|
-| **IaC Type** | OpenTofu |
-| **OpenTofu Version** | >= 1.6.0 |
+| **IaC Type** | OpenTofu (Terraform also works) |
+| **IaC Version** | OpenTofu >= 1.6.0, or Terraform >= 1.2.0 |
 | **AWS Provider** | >= 6.19.0 |
 | **Working Directory** | `sagemaker` |
+
+The code is plain HCL — the `required_version` floor comes from the `lifecycle` preconditions, not from OpenTofu. It is validated on both OpenTofu and Terraform 1.5.7 (env0's default Terraform version), so a template created with the wrong IaC type still deploys. Set the type to **OpenTofu** if you want the demo to actually exercise OpenTofu.
 
 > **Provider floor matters here.** `notebook-al2023-v1` was only added to the AWS provider's `platform_identifier` validation in **6.19.0**; the 5.x line rejects it before the API is ever called. If you must stay on an older provider, set `platform_identifier = "notebook-al2-v3"`.
 

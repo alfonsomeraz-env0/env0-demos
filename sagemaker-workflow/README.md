@@ -28,11 +28,13 @@ A notebook instance bills for every hour it is `InService`, and it is the only s
 
 ### 1. Create the three stage templates
 
-| Template Name | IaC Type | Working Directory |
-|---|---|---|
-| `sagemaker-workflow-data` | OpenTofu | `sagemaker-workflow/data` |
-| `sagemaker-workflow-network` | OpenTofu | `sagemaker-workflow/network` |
-| `sagemaker-notebook` | OpenTofu | `sagemaker` |
+| Template Name | IaC Type | IaC Version | Working Directory |
+|---|---|---|---|
+| `sagemaker-workflow-data` | OpenTofu | >= 1.6.0 | `sagemaker-workflow/data` |
+| `sagemaker-workflow-network` | OpenTofu | >= 1.6.0 | `sagemaker-workflow/network` |
+| `sagemaker-notebook` | OpenTofu | >= 1.6.0 | `sagemaker` |
+
+> **Set the IaC type per template, not just in the workflow file.** With `templateName`, the binary and version come from each sub-environment's own template. A template left on env0's default (Terraform 1.5.7) still deploys — all three stages carry `required_version = ">= 1.2.0"` and are validated against both toolchains — but it runs Terraform, not OpenTofu. Only the `notebook` stage has a hard floor beyond that: AWS provider >= 6.19.0.
 
 ### 2. Enable Environment Outputs
 
@@ -60,7 +62,7 @@ Set `environment` (default `dev`) to the same value on all three stages so resou
 
 ## Alternative: No Templates, Inline VCS
 
-To skip creating the three templates, define the stages inline instead — replace `templateName` with a `vcs` block:
+To skip creating the three templates, define the stages inline instead — replace `templateName` with a `vcs` block. This is also the only way to pin the IaC type and version *in code*, which avoids the whole class of "template defaulted to Terraform 1.5.7" errors:
 
 ```yaml
 environments:
@@ -68,6 +70,7 @@ environments:
     name: "SageMaker Data Bucket"
     vcs:
       type: opentofu
+      opentofuVersion: "1.6.0"
       repository: "https://github.com/<your-org>/env0-demos"
       path: "sagemaker-workflow/data"
 
@@ -75,6 +78,7 @@ environments:
     name: "SageMaker Network"
     vcs:
       type: opentofu
+      opentofuVersion: "1.6.0"
       repository: "https://github.com/<your-org>/env0-demos"
       path: "sagemaker-workflow/network"
 
@@ -82,6 +86,7 @@ environments:
     name: "SageMaker Notebook"
     vcs:
       type: opentofu
+      opentofuVersion: "1.6.0"
       repository: "https://github.com/<your-org>/env0-demos"
       path: "sagemaker"
     requiresApproval: true

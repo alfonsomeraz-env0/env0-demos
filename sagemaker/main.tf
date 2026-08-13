@@ -1,5 +1,7 @@
 terraform {
-  required_version = ">= 1.6.0" # OpenTofu 1.6 is the first release
+  # Floor is set by the lifecycle preconditions below, not by OpenTofu. Runs on
+  # OpenTofu 1.6+ or Terraform 1.2+ — env0's default Terraform is 1.5.7.
+  required_version = ">= 1.2.0"
 
   required_providers {
     aws = {
