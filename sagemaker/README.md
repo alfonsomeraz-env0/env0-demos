@@ -31,7 +31,9 @@ Custom flow format is identical between Terraform and OpenTofu, so `env0.yaml` s
 |---|---|---|---|---|
 | `aws_region` | string | `us-east-1` | No | AWS region |
 | `environment` | string | `dev` | No | Environment name — prefixes every resource name |
-| `notebook_name` | string | `demo-notebook` | No | Notebook name (suffix after the environment prefix) |
+| `notebook_name` | string | `demo-notebook` | No | Notebook name (middle of the composed name) |
+| `append_random_suffix` | bool | `true` | No | Append a generated 6-char suffix so one template can back many notebooks |
+| `unique_suffix` | string | `""` | No | Fixed suffix instead of a generated one |
 | `instance_type` | string | `ml.t3.medium` | No | ML compute instance type |
 | `volume_size` | number | `5` | No | ML storage volume size in GB (5–16384) |
 | `platform_identifier` | string | `notebook-al2023-v1` | No | Notebook runtime platform (needs AWS provider >= 6.19.0) |
@@ -52,14 +54,43 @@ Custom flow format is identical between Terraform and OpenTofu, so `env0.yaml` s
 
 1. Create an env0 template pointing at the `sagemaker` folder, IaC type **OpenTofu**
 2. Deploy — no variables are required; defaults produce a working notebook
-3. Open Jupyter with the presigned URL from the `open_notebook_command` output:
+3. Open Jupyter by running the `open_notebook_command` output verbatim — it already contains the generated instance name:
    ```bash
    aws sagemaker create-presigned-notebook-instance-url \
-     --notebook-instance-name dev-demo-notebook --region us-east-1
+     --notebook-instance-name dev-demo-notebook-k3f9qz --region us-east-1
    ```
 4. Destroy the environment when you are done (or set a TTL on it)
 
 Deploy takes about 5 minutes; destroy takes about 3.
+
+## Deploying Multiple Notebooks
+
+Every resource here is named after the notebook, so deploying this template twice with the same variables collides — the IAM role, lifecycle config, and KMS alias are all account-wide unique names.
+
+By default the composed name gets a generated 6-character suffix:
+
+```
+<environment>-<notebook_name>-<suffix>     dev-demo-notebook-k3f9qz
+```
+
+The suffix is generated once and kept in that environment's state, so it is stable across redeploys of the same environment and different between environments. Deploy the template as many times as you like with no variable changes at all.
+
+To control the names instead, set `unique_suffix` per environment — the env0 environment name is a good choice:
+
+```hcl
+unique_suffix = "team-a"   # dev-demo-notebook-team-a
+```
+
+Or turn suffixes off entirely with `append_random_suffix = false`, which reproduces the original single-notebook naming. `unique_suffix` wins over `append_random_suffix` when both are set.
+
+Names are validated at **plan** time, before anything is created:
+
+| Check | Limit |
+|---|---|
+| Composed name length | 49 chars — `-execution-role` against IAM's 64 and `-auto-shutdown` against SageMaker's 63 both leave exactly that |
+| Character set | Alphanumeric with single dashes, matching SageMaker's pattern |
+
+> **Upgrading an existing environment.** `append_random_suffix` defaults to `true`, so an environment deployed before this change will plan to rename — and therefore replace — its notebook and role. To keep an existing environment exactly as it is, set `append_random_suffix = false` on it. New environments can take the default.
 
 ## Cost
 
@@ -101,9 +132,10 @@ To edit the timeout, change `idle_timeout_minutes` and redeploy — the lifecycl
 Auto-shutdown stops the instance, it does not delete it. The volume, files, and lifecycle config survive:
 
 ```bash
-aws sagemaker start-notebook-instance --notebook-instance-name dev-demo-notebook --region us-east-1
-aws sagemaker wait notebook-instance-in-service --notebook-instance-name dev-demo-notebook --region us-east-1
-aws sagemaker create-presigned-notebook-instance-url --notebook-instance-name dev-demo-notebook --region us-east-1
+NOTEBOOK=$(tofu output -raw notebook_instance_name)   # or copy it from the env0 outputs
+aws sagemaker start-notebook-instance --notebook-instance-name "$NOTEBOOK" --region us-east-1
+aws sagemaker wait notebook-instance-in-service --notebook-instance-name "$NOTEBOOK" --region us-east-1
+aws sagemaker create-presigned-notebook-instance-url --notebook-instance-name "$NOTEBOOK" --region us-east-1
 ```
 
 `create-presigned-notebook-instance-url` fails with `NotebookInstance must be in InService state` while the instance is stopped — start it first.
@@ -128,4 +160,5 @@ aws_sagemaker_notebook_instance_lifecycle_configuration   (enable_auto_shutdown)
 aws_iam_role + aws_iam_role_policy
 aws_iam_role_policy_attachment                            (attach_sagemaker_full_access)
 aws_kms_key + aws_kms_alias                               (create_kms_key)
+random_string                                             (append_random_suffix)
 ```

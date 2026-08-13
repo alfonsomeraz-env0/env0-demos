@@ -21,6 +21,23 @@ variable "notebook_name" {
   }
 }
 
+variable "append_random_suffix" {
+  description = "Append a generated 6-character suffix to every resource name, so this template can back many notebooks at once. Ignored when unique_suffix is set."
+  type        = bool
+  default     = true
+}
+
+variable "unique_suffix" {
+  description = "Fixed suffix for every resource name — set it per environment (e.g. the env0 environment name) for predictable names instead of a generated one."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.unique_suffix == "" || can(regex("^[a-zA-Z0-9](-*[a-zA-Z0-9])*$", var.unique_suffix))
+    error_message = "unique_suffix must be alphanumeric with single dashes between characters."
+  }
+}
+
 variable "instance_type" {
   description = "ML compute instance type for the notebook (ml.t3.medium is the cheapest general-purpose option)"
   type        = string

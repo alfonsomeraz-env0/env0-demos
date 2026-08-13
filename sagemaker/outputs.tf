@@ -13,6 +13,11 @@ output "notebook_url" {
   value       = aws_sagemaker_notebook_instance.this.url
 }
 
+output "name_suffix" {
+  description = "Suffix applied to every resource name (empty when neither unique_suffix nor append_random_suffix is used)"
+  value       = local.suffix
+}
+
 output "execution_role_arn" {
   description = "ARN of the notebook execution role"
   value       = aws_iam_role.notebook.arn

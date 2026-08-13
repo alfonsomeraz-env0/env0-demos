@@ -10,6 +10,10 @@ terraform {
       # platform_identifier — the 5.x line rejects it outright.
       version = "~> 6.19"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.5"
+    }
   }
 }
 
@@ -32,7 +36,29 @@ data "aws_caller_identity" "current" {}
 data "aws_partition" "current" {}
 
 locals {
-  name = "${var.environment}-${var.notebook_name}"
+  base_name = "${var.environment}-${var.notebook_name}"
+
+  # Every resource here is named after the notebook, so two environments built
+  # from this template collide unless the names differ. Each env0 environment
+  # keeps its own state, so a suffix generated once per state is what lets one
+  # template back any number of notebooks.
+  append_random = var.unique_suffix == "" && var.append_random_suffix
+  suffix        = var.unique_suffix != "" ? var.unique_suffix : (local.append_random ? random_string.suffix[0].result : "")
+  name          = local.suffix == "" ? local.base_name : "${local.base_name}-${local.suffix}"
+
+  # The random suffix is unknown until apply, but its length never is: always
+  # RANDOM_SUFFIX_LENGTH characters plus a separator. Computing the length this
+  # way keeps the name-length preconditions checkable at plan time, before
+  # anything is created.
+  name_length = length(local.base_name) + (
+    local.append_random ? local.random_suffix_length + 1 : (local.suffix == "" ? 0 : length(local.suffix) + 1)
+  )
+  random_suffix_length = 6
+
+  # Longest derived name wins: "<name>-execution-role" against IAM's 64-char
+  # limit leaves 49, and "<name>-auto-shutdown" against SageMaker's 63-char
+  # limit leaves the same 49.
+  max_name_length = 49
 
   # Built from account/region/name rather than the resource attribute so the
   # execution role policy can reference the notebook without a dependency cycle.
@@ -40,6 +66,16 @@ locals {
 
   kms_key_arn = var.create_kms_key ? aws_kms_key.notebook[0].arn : var.kms_key_arn
   use_vpc     = var.subnet_id != ""
+}
+
+resource "random_string" "suffix" {
+  count = local.append_random ? 1 : 0
+
+  length  = local.random_suffix_length
+  lower   = true
+  upper   = false
+  numeric = true
+  special = false
 }
 
 # ── KMS — encrypts the ML storage volume ─────────────────────────────────────
@@ -123,6 +159,20 @@ resource "aws_iam_role" "notebook" {
   assume_role_policy = data.aws_iam_policy_document.assume_role.json
 
   tags = { Name = "${local.name}-execution-role" }
+
+  # Checked on the first resource created so a bad name fails at plan, rather
+  # than halfway through an apply.
+  lifecycle {
+    precondition {
+      condition     = local.name_length <= local.max_name_length
+      error_message = "environment + notebook_name (+ suffix) is ${local.name_length} characters; keep it to ${local.max_name_length} so the derived role and lifecycle config names stay within AWS limits."
+    }
+
+    precondition {
+      condition     = can(regex("^[a-zA-Z0-9](-*[a-zA-Z0-9])*$", local.base_name))
+      error_message = "environment + notebook_name must form an alphanumeric name with single dashes between characters, got \"${local.base_name}\"."
+    }
+  }
 }
 
 # Broad by design — it is what the SageMaker console suggests and what most
