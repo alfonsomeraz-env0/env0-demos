@@ -24,7 +24,7 @@ resource "aws_s3_bucket" "insecure_bucket" {
   bucket = "my-insecure-bucket"
   
   # VIOLATION: Public ACL
-  acl = "public-read"
+  acl = "private"
 
   tags = {
     Name = "InsecureBucket"
