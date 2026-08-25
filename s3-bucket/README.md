@@ -13,7 +13,7 @@ Demonstrates deploying an AWS S3 bucket with versioning using Terraform, managed
 |---|---|
 | **IaC Type** | Terraform |
 | **Terraform Version** | >= 1.0 |
-| **Working Directory** | `s3_bucket` |
+| **Working Directory** | `s3-bucket` |
 
 ## Variables
 
