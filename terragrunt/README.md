@@ -20,6 +20,18 @@ Demonstrates using Terragrunt with env0 for DRY infrastructure configuration. `t
 | **Terragrunt Version** | >= 0.50 |
 | **Working Directory** | `terragrunt` |
 
+## Wiring the Backend from `terragrunt-bootstrap`
+
+`terragrunt.hcl` reads the backend bucket/table/region from environment variables, falling back to defaults that match `terragrunt-bootstrap`'s own defaults:
+
+| Env Var | Falls Back To |
+|---|---|
+| `TG_STATE_BUCKET` | `demo-env0-terragrunt-state` |
+| `TG_STATE_DYNAMODB_TABLE` | `demo-env0-terragrunt-lock` |
+| `TG_STATE_REGION` | `us-east-2` |
+
+If you override `bucket_name`, `dynamodb_table_name`, or `aws_region` when deploying `terragrunt-bootstrap`, set these three as **Environment Variables** on this template, each sourced from the bootstrap environment's matching output (`bucket_name`, `dynamodb_table_name`, `aws_region`) via env0's Environment Output feature. This keeps the two stages from silently drifting apart.
+
 ## What `terragrunt.hcl` Generates
 
 **`provider.tf`**

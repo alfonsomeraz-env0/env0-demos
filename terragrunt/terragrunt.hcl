@@ -1,5 +1,5 @@
 locals {
-  aws_region  = "us-east-2"
+  aws_region  = get_env("TG_STATE_REGION", "us-east-2")
   environment = "dev"
   project     = "demo-env0"
 }
@@ -18,11 +18,11 @@ remote_state {
     if_exists = "overwrite_terragrunt"
   }
   config = {
-    bucket         = "demo-env0-terragrunt-state"
+    bucket         = get_env("TG_STATE_BUCKET", "demo-env0-terragrunt-state")
     key            = "${local.environment}/terraform.tfstate"
     region         = local.aws_region
     encrypt        = true
-    dynamodb_table = "demo-env0-terragrunt-lock"
+    dynamodb_table = get_env("TG_STATE_DYNAMODB_TABLE", "demo-env0-terragrunt-lock")
   }
 }
 

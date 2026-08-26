@@ -23,7 +23,7 @@ Terragrunt needs a remote backend before any module can run. This bootstrap modu
 
 | Name | Type | Description |
 |---|---|---|
-| `aws_region` | string | AWS region (default: `us-east-1`) |
+| `aws_region` | string | AWS region (default: `us-east-2`) |
 | `bucket_name` | string | S3 bucket name for state storage (globally unique) |
 | `dynamodb_table_name` | string | DynamoDB table name for state locking |
 | `environment` | string | Environment name for tagging |
@@ -35,7 +35,7 @@ After deployment, env0.yaml prints the backend configuration details:
 ```
 S3 bucket:      my-tfstate-bucket
 DynamoDB table: my-tfstate-lock
-Region:         us-east-1
+Region:         us-east-2
 ```
 
 Copy these values into your `terragrunt.hcl` remote state configuration.
