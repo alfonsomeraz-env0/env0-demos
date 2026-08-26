@@ -18,11 +18,15 @@ remote_state {
     if_exists = "overwrite_terragrunt"
   }
   config = {
-    bucket         = get_env("TG_STATE_BUCKET", "demo-env0-terragrunt-state")
-    key            = "${local.environment}/terraform.tfstate"
-    region         = local.aws_region
-    encrypt        = true
-    dynamodb_table = get_env("TG_STATE_DYNAMODB_TABLE", "demo-env0-terragrunt-lock")
+    bucket                 = get_env("TG_STATE_BUCKET", "demo-env0-terragrunt-state")
+    key                    = "${local.environment}/terraform.tfstate"
+    region                 = local.aws_region
+    encrypt                = true
+    dynamodb_table         = get_env("TG_STATE_DYNAMODB_TABLE", "demo-env0-terragrunt-lock")
+    # Terragrunt's bucket-policy auto-enforcement 404s (NoSuchBucketPolicy) against a
+    # bucket with no existing policy — a known upstream bug (gruntwork-io/terragrunt#2879).
+    # The bootstrap module already sets versioning/encryption/public-access-block, so skip it.
+    disable_bucket_update  = true
   }
 }
 
