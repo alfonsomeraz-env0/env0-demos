@@ -24,8 +24,8 @@ Terragrunt needs a remote backend before any module can run. This bootstrap modu
 | Name | Type | Description |
 |---|---|---|
 | `aws_region` | string | AWS region (default: `us-east-2`) |
-| `bucket_name` | string | S3 bucket name for state storage (globally unique) |
-| `dynamodb_table_name` | string | DynamoDB table name for state locking |
+| `bucket_name` | string | S3 bucket name for state storage. Default `""` auto-generates a unique name (`demo-env0-terragrunt-state-<8 hex chars>`) — S3 bucket names are unique account-wide, so repeat deploys of this demo in the same account will collide on a fixed name |
+| `dynamodb_table_name` | string | DynamoDB table name for state locking. Default `""` auto-generates a matching unique name |
 | `environment` | string | Environment name for tagging |
 
 ## Post-Deploy Output
@@ -33,12 +33,12 @@ Terragrunt needs a remote backend before any module can run. This bootstrap modu
 After deployment, env0.yaml prints the backend configuration details:
 
 ```
-S3 bucket:      my-tfstate-bucket
-DynamoDB table: my-tfstate-lock
+S3 bucket:      demo-env0-terragrunt-state-a1b2c3d4
+DynamoDB table: demo-env0-terragrunt-lock-a1b2c3d4
 Region:         us-east-2
 ```
 
-Copy these values into your `terragrunt.hcl` remote state configuration.
+In the `terragrunt-workflow/` demo, wire these into the `terragrunt` stage as `TG_STATE_BUCKET` / `TG_STATE_DYNAMODB_TABLE` / `TG_STATE_REGION` Environment Variables sourced from this stage's outputs — see `terragrunt/README.md`. Outside a workflow, copy them by hand into `terragrunt.hcl`.
 
 ## Outputs
 
@@ -62,6 +62,7 @@ This module **must deploy before** any Terragrunt module that references this ba
 ## Resources Created
 
 ```
+random_id (name suffix, only when bucket_name/dynamodb_table_name are left empty)
 aws_s3_bucket
 aws_s3_bucket_versioning
 aws_s3_bucket_server_side_encryption_configuration

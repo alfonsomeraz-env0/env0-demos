@@ -22,7 +22,7 @@ Demonstrates using Terragrunt with env0 for DRY infrastructure configuration. `t
 
 ## Wiring the Backend from `terragrunt-bootstrap`
 
-`terragrunt.hcl` reads the backend bucket/table/region from environment variables, falling back to defaults that match `terragrunt-bootstrap`'s own defaults:
+`terragrunt-bootstrap` auto-generates a unique bucket/table name by default (see its README) — there is no fixed name to fall back to. `terragrunt.hcl` reads the backend bucket/table/region from environment variables, with the old fixed names kept only as a last-resort default for a standalone (non-workflow) deploy:
 
 | Env Var | Falls Back To |
 |---|---|
@@ -30,7 +30,7 @@ Demonstrates using Terragrunt with env0 for DRY infrastructure configuration. `t
 | `TG_STATE_DYNAMODB_TABLE` | `demo-env0-terragrunt-lock` |
 | `TG_STATE_REGION` | `us-east-2` |
 
-If you override `bucket_name`, `dynamodb_table_name`, or `aws_region` when deploying `terragrunt-bootstrap`, set these three as **Environment Variables** on this template, each sourced from the bootstrap environment's matching output (`bucket_name`, `dynamodb_table_name`, `aws_region`) via env0's Environment Output feature. This keeps the two stages from silently drifting apart.
+**Set these three as Environment Variables on this template**, each sourced from `terragrunt-bootstrap`'s matching output (`bucket_name`, `dynamodb_table_name`, `aws_region`) via env0's Environment Output feature. This is required, not optional, when running as part of `terragrunt-workflow/` — without it, `terragrunt init` points at a bucket that doesn't exist.
 
 ## What `terragrunt.hcl` Generates
 
