@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: payments
+  labels:
+    app: payments
+    environment: production
+    managed-by: env0
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ingress
+  labels:
+    app: ingress
+    managed-by: env0

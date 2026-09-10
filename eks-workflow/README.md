@@ -8,10 +8,10 @@ Demonstrates an env0 workflow for deploying a Kubernetes platform in two stages:
 infra ──► [approval required] ──► apps
 ```
 
-| Stage | Template | Depends On | Approval | Description |
-|---|---|---|---|---|
-| `infra` | `acme-financial-eks-infra` | — | No | EKS cluster + VPC + node groups |
-| `apps` | `acme-financial-eks-apps` | `infra` | **Yes** | Kubernetes workloads + Helm charts |
+| Stage | Template | IaC Type | Depends On | Approval | Description |
+|---|---|---|---|---|---|
+| `infra` | `acme-financial-eks-infra` | Terraform | — | No | EKS cluster + VPC + node groups |
+| `apps` | `acme-financial-eks-apps` | Kubernetes (native manifests) | `infra` | **Yes** | Namespaces + a sample deployment/service applied directly with `kubectl apply`, no Terraform in the loop |
 
 ## Why Approval on Apps?
 
@@ -20,11 +20,13 @@ The apps stage requires manual approval because deploying workloads to a fresh c
 ## env0 Setup
 
 1. Create a **Workflow Template** in env0
-2. Point to `acme-eks-demo/env0.workflow.yaml`
+2. Point to `eks-workflow/env0.workflow.yaml`
 3. Ensure these templates exist in your env0 organization:
-   - `acme-financial-eks-infra` — EKS infrastructure template
-   - `acme-financial-eks-apps` — Kubernetes applications template
+   - `acme-financial-eks-infra` — Terraform, path `eks-workflow/infra`
+   - `acme-financial-eks-apps` — env0 IaC type **Kubernetes**, path `eks-workflow/apps-k8s` (raw manifests: `namespace.yaml`, `deployment.yaml`, `service.yaml`)
 4. Deploy the workflow
+
+> The original Terraform + Helm-provider version of the apps stage is still in `eks-workflow/apps/` for reference, but the registered `acme-financial-eks-apps` template now points at `apps-k8s/` so the stage deploys with env0's native Kubernetes IaC type instead of Terraform.
 
 > **Note:** The EKS infrastructure and application templates are separate repositories/configurations registered in env0. This `env0.workflow.yaml` is the orchestration layer that connects them.
 
