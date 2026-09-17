@@ -21,6 +21,9 @@ def lambda_handler(event, context):
     elif method == "POST" and path == "/items":
         body = json.loads(event.get("body") or "{}")
         return create_item(body)
+    elif method == "PATCH" and path_params.get("id"):
+        body = json.loads(event.get("body") or "{}")
+        return update_item(path_params["id"], body)
     elif method == "DELETE" and path_params.get("id"):
         return delete_item(path_params["id"])
     else:
@@ -54,6 +57,30 @@ def create_item(body):
     }
     table.put_item(Item=item)
     return _response(201, item)
+
+
+def update_item(item_id, body):
+    allowed = {"name", "status"}
+    updates = {k: v for k, v in body.items() if k in allowed}
+    if not updates:
+        return _response(400, {"error": "Provide at least one of: name, status"})
+
+    result = table.get_item(Key={"id": item_id})
+    if not result.get("Item"):
+        return _response(404, {"error": f"Item {item_id} not found"})
+
+    expr = "SET " + ", ".join(f"#{k} = :{k}" for k in updates)
+    names = {f"#{k}": k for k in updates}
+    values = {f":{k}": v for k, v in updates.items()}
+
+    result = table.update_item(
+        Key={"id": item_id},
+        UpdateExpression=expr,
+        ExpressionAttributeNames=names,
+        ExpressionAttributeValues=values,
+        ReturnValues="ALL_NEW",
+    )
+    return _response(200, result["Attributes"])
 
 
 def delete_item(item_id):
