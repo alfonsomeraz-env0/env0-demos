@@ -48,8 +48,9 @@ locals {
 
   # AWS rejects an explicit empty security-group list on VPC instances ("at
   # least one security group required"), so fall back to the VPC's default
-  # security group instead of passing var.security_group_ids through as-is.
-  security_group_ids = length(var.security_group_ids) > 0 ? var.security_group_ids : data.aws_security_groups.default.ids
+  # security group instead of passing an empty list through.
+  explicit_security_group_ids = var.security_group_ids != "" ? jsondecode(var.security_group_ids) : []
+  security_group_ids          = length(local.explicit_security_group_ids) > 0 ? local.explicit_security_group_ids : data.aws_security_groups.default.ids
 }
 
 resource "aws_instance" "this" {

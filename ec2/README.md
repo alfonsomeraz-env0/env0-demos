@@ -26,7 +26,7 @@ Demonstrates deploying an EC2 instance with security best practices using Terraf
 | `instance_name` | string | `demo-instance` | No | Name tag for the instance |
 | `instance_type` | string | `t3.micro` | No | EC2 instance type |
 | `subnet_id` | string | — | **Yes** | Subnet ID to launch into |
-| `security_group_ids` | list(string) | `[]` | No | Security group IDs to attach |
+| `security_group_ids` | string (JSON-encoded list) | `""` | No | Security group IDs to attach, e.g. `["sg-0123"]`. Empty uses the VPC's default security group. |
 | `root_volume_size` | number | `20` | No | Root volume size in GB |
 
 > **Note:** `subnet_id` is required. Use the `vpc` demo to create a subnet first, or provide an existing one.

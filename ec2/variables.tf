@@ -28,9 +28,9 @@ variable "subnet_id" {
 }
 
 variable "security_group_ids" {
-  description = "List of security group IDs to attach to the instance"
-  type        = list(string)
-  default     = []
+  description = "JSON-encoded list of security group IDs to attach to the instance, e.g. [\"sg-0123\"]. Empty string uses the VPC's default security group."
+  type        = string
+  default     = ""
 }
 
 variable "root_volume_size" {
