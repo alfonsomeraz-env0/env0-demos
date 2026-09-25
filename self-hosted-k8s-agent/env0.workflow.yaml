@@ -1,0 +1,13 @@
+environments:
+  infra:
+    name: "env0 Self-Hosted Agent - EKS Infrastructure"
+    templateName: "env0-self-hosted-agent-infra"
+
+  apps:
+    name: "env0 Self-Hosted Agent - Helm Install"
+    templateName: "env0-self-hosted-agent-apps"
+    needs:
+      - infra
+
+settings:
+  environmentRemovalStrategy: destroy
