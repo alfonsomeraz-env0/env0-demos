@@ -59,12 +59,18 @@ trusting any setup instructions from it. Set the confirmed URL as
 
 ## env0 Setup
 
-1. Create a **Workflow Template** pointing at `self-hosted-k8s-agent/env0.workflow.yaml`
-2. Register two templates:
-   - `env0-self-hosted-agent-infra` — Terraform, path `self-hosted-k8s-agent/infra`
-   - `env0-self-hosted-agent-apps` — Terraform, path `self-hosted-k8s-agent/apps`
-3. Set `agent_chart_repository` (and any overrides) as variables on the `apps` template
-4. Deploy the workflow
+Register three templates in this order (the workflow template resolves the
+other two by **name**, so they must exist first):
+
+| Template | IaC Type | Path |
+|---|---|---|
+| `env0-self-hosted-agent-infra` | Terraform | `self-hosted-k8s-agent/infra` |
+| `env0-self-hosted-agent-apps` | Terraform | `self-hosted-k8s-agent/apps` |
+| `env0-self-hosted-agent-workflow` | **Workflow** | `self-hosted-k8s-agent` (the directory containing `env0.workflow.yaml`, not the file itself) |
+
+Then:
+1. Set `agent_chart_repository` (and any overrides) as variables on the `apps` template
+2. Deploy the workflow template — it will run `infra` first, then `apps`
 
 ## Local run
 
