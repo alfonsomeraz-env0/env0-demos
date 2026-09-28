@@ -5,7 +5,7 @@ resource "aws_apigatewayv2_api" "http" {
 
   cors_configuration {
     allow_origins = ["*"]
-    allow_methods = ["GET", "POST", "DELETE", "OPTIONS"]
+    allow_methods = ["GET", "POST", "PATCH", "DELETE", "OPTIONS"]
     allow_headers = ["Content-Type"]
   }
 
@@ -44,6 +44,12 @@ resource "aws_apigatewayv2_route" "get_item" {
 resource "aws_apigatewayv2_route" "post_item" {
   api_id    = aws_apigatewayv2_api.http.id
   route_key = "POST /items"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+
+resource "aws_apigatewayv2_route" "patch_item" {
+  api_id    = aws_apigatewayv2_api.http.id
+  route_key = "PATCH /items/{id}"
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
