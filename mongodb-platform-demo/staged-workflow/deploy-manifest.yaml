@@ -1,0 +1,19 @@
+# Per-stage variables for `env0 environment create --manifest`.
+# Bucket names must be globally unique; change the suffix if a name is taken.
+variables:
+  - name: aws_region
+    value: us-east-2
+    type: terraform
+subEnvironments:
+  dev:
+    variables:
+      - {name: bucket_name, value: mongodb-demo-staged-dev-alfonso, type: terraform}
+      - {name: environment, value: dev, type: terraform}
+  staging:
+    variables:
+      - {name: bucket_name, value: mongodb-demo-staged-staging-alfonso, type: terraform}
+      - {name: environment, value: staging, type: terraform}
+  prod:
+    variables:
+      - {name: bucket_name, value: mongodb-demo-staged-prod-alfonso, type: terraform}
+      - {name: environment, value: prod, type: terraform}

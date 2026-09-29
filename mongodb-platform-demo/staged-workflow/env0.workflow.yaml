@@ -1,0 +1,20 @@
+environments:
+  dev:
+    name: "Staged S3 - dev"
+    templateName: "s3-bucket"
+
+  staging:
+    name: "Staged S3 - staging"
+    templateName: "s3-bucket"
+    needs:
+      - dev
+
+  prod:
+    name: "Staged S3 - prod"
+    templateName: "s3-bucket"
+    requiresApproval: true
+    needs:
+      - staging
+
+settings:
+  environmentRemovalStrategy: destroy

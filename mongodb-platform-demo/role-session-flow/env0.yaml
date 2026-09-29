@@ -1,0 +1,19 @@
+version: 2
+deploy:
+  steps:
+    terraformPlan:
+      before:
+        - name: Assume AWS role with deployment-named session
+          run: |
+            set -euo pipefail
+            : "${AWS_ROLE_ARN:?set AWS_ROLE_ARN on the environment}"
+            # Session name = env0 deployment ID, so a CloudTrail event maps back
+            # to the deployment (and the user who triggered it).
+            SESSION="env0-${ENV0_DEPLOYMENT_LOG_ID:-unknown}"
+            CREDS=$(aws sts assume-role --role-arn "$AWS_ROLE_ARN" \
+              --role-session-name "$SESSION" --duration-seconds 3600 \
+              --query Credentials --output json)
+            echo "Assumed $AWS_ROLE_ARN as session $SESSION"
+            echo "AWS_ACCESS_KEY_ID=$(echo "$CREDS" | jq -r .AccessKeyId)" >> "$ENV0_ENV"
+            echo "AWS_SECRET_ACCESS_KEY=$(echo "$CREDS" | jq -r .SecretAccessKey)" >> "$ENV0_ENV"
+            echo "AWS_SESSION_TOKEN=$(echo "$CREDS" | jq -r .SessionToken)" >> "$ENV0_ENV"
