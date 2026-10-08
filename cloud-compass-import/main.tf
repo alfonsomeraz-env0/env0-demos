@@ -35,6 +35,13 @@ resource "aws_security_group" "vpce_sg" {
     cidr_blocks = ["10.0.0.0/24"]
   }
 
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["20.0.0.0/24"]
+  }
+
   tags = {
     Name = "vpce-sg"
   }
