@@ -15,12 +15,12 @@ provider "aws" {
 # Adopt the existing ClickOps-created resources into state
 import {
   to = aws_security_group.vpce_sg
-  id = var.security_group_id
+  id = "sg-0aef10234f2b580b7"
 }
 
 import {
   to = aws_vpc_endpoint.test_vpce1
-  id = var.vpc_endpoint_id
+  id = "vpce-0b61a89efc3e50614"
 }
 
 resource "aws_security_group" "vpce_sg" {
