@@ -3,23 +3,23 @@ environments:
   bootstrap:
     name: "Bootstrap"
     templateName: "noop"
-    workspace: "bootstrap"
+    workspace: "doc-bootstrap"
     requiresApproval: true
   svc-a:
     name: "Service A"
     templateName: "noop"
-    workspace: "svc-a"
+    workspace: "doc-svc-a"
     needs: [bootstrap]
     requiresApproval: false
   svc-b:
     name: "Service B"
     templateName: "noop"
-    workspace: "svc-b"
+    workspace: "doc-svc-b"
     needs: [svc-a]
     requiresApproval: false
   svc-c:
     name: "Service C"
     templateName: "noop"
-    workspace: "svc-c"
+    workspace: "doc-svc-c"
     needs: [svc-a]
     requiresApproval: false
