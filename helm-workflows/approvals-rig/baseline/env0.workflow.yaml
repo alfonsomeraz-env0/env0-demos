@@ -1,0 +1,20 @@
+# Runs 1 and 2: no requiresApproval lines
+  bootstrap:
+    name: "Bootstrap"
+    templateName: "noop"
+    workspace: "bootstrap"
+  svc-a:
+    name: "Service A"
+    templateName: "noop"
+    workspace: "svc-a"
+    needs: [bootstrap]
+  svc-b:
+    name: "Service B"
+    templateName: "noop"
+    workspace: "svc-b"
+    needs: [svc-a]
+  svc-c:
+    name: "Service C"
+    templateName: "noop"
+    workspace: "svc-c"
+    needs: [svc-a]
