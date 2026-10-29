@@ -1,0 +1,25 @@
+# Runs 1 and 2: delete the requiresApproval lines
+environments:
+  bootstrap:
+    name: "Bootstrap"
+    templateName: "noop"
+    workspace: "bootstrap"
+    requiresApproval: true
+  svc-a:
+    name: "Service A"
+    templateName: "noop"
+    workspace: "svc-a"
+    needs: [bootstrap]
+    requiresApproval: false
+  svc-b:
+    name: "Service B"
+    templateName: "noop"
+    workspace: "svc-b"
+    needs: [svc-a]
+    requiresApproval: false
+  svc-c:
+    name: "Service C"
+    templateName: "noop"
+    workspace: "svc-c"
+    needs: [svc-a]
+    requiresApproval: false

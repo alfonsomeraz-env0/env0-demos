@@ -1,0 +1,14 @@
+environments:
+  app-resources:
+    name: "App resources (Terraform)"
+    templateName: "app-resources-tf"
+    requiresApproval: true
+  web:
+    name: "demo-web (Helm)"
+    templateName: "demo-web-git"
+    workspace: "demo-web" # for Helm this sets the release name
+    needs: [app-resources]
+    requiresApproval: false
+
+settings:
+  environmentRemovalStrategy: destroy

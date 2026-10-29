@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "demo-web.fullname" . }}-config
+data:
+  bucketName: {{ .Values.config.bucketName | quote }}
+  environment: {{ .Values.config.environment | quote }}
