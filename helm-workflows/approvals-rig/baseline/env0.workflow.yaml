@@ -1,4 +1,5 @@
 # Runs 1 and 2: no requiresApproval lines
+environments:
   bootstrap:
     name: "Bootstrap"
     templateName: "noop"

@@ -19,7 +19,7 @@ helm-workflows/
 | `app-resources-tf` | Terraform | `helm-workflows/terraform/app-resources` | AWS credential |
 | `demo-web-workflow` | Workflow | `helm-workflows/workflows` | |
 | `noop` | Terraform 1.4+ | `helm-workflows/approvals-rig/noop` | |
-| `approvals-rig` | Workflow | `helm-workflows/approvals-rig` | |
+| `approvals-rig-baseline` / `approvals-rig-documented` | Workflow | `helm-workflows/approvals-rig/baseline` / `.../documented` | |
 
 Project policies: Environment Outputs on, Default auto-approve off.
 
