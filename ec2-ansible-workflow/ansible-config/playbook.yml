@@ -1,0 +1,32 @@
+---
+- name: Configure web server
+  hosts: web
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Install nginx
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+        update_cache: true
+
+    - name: Enable and start nginx
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: true
+
+    - name: Deploy landing page
+      ansible.builtin.copy:
+        dest: /var/www/html/index.html
+        mode: "0644"
+        content: |
+          <!DOCTYPE html>
+          <html lang="en">
+          <head><meta charset="UTF-8" /><title>env0 Demo</title></head>
+          <body style="background:#000;color:#fff;font-family:sans-serif;text-align:center;padding-top:20vh">
+            <h1>Powered by <span style="color:#B8E500">env0</span></h1>
+            <p>EC2 provisioned with Terraform, configured with Ansible</p>
+          </body>
+          </html>

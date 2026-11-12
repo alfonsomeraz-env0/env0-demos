@@ -1,0 +1,13 @@
+environments:
+  ec2:
+    name: "EC2 Instance"
+    templateName: "ec2-ansible-wf-ec2"
+
+  ansible:
+    name: "Ansible Config"
+    templateName: "ec2-ansible-wf-ansible"
+    needs:
+      - ec2
+
+settings:
+  environmentRemovalStrategy: destroy

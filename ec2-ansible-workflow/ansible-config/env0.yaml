@@ -1,0 +1,44 @@
+version: 2
+
+deploy:
+  steps:
+    ansibleRun:
+      before:
+        - name: Validate inputs
+          run: |
+            for v in INSTANCE_IP SSH_PRIVATE_KEY; do
+              if [ -z "${!v}" ] || [ "${!v}" = "null" ]; then
+                echo "$v is not set. Check the Environment Output variables on the workflow template."
+                exit 1
+              fi
+            done
+
+        - name: Write SSH key and inventory
+          run: |
+            mkdir -p ~/.ssh
+            printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/ansible_key
+            chmod 600 ~/.ssh/ansible_key
+            cat > inventory.ini <<INV
+            [web]
+            $INSTANCE_IP ansible_user=ubuntu ansible_ssh_private_key_file=$HOME/.ssh/ansible_key ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+            INV
+
+        - name: Wait for SSH
+          run: |
+            for i in $(seq 1 40); do
+              if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o BatchMode=yes \
+                   -i ~/.ssh/ansible_key ubuntu@"$INSTANCE_IP" true 2>/dev/null; then
+                echo "SSH ready on $INSTANCE_IP"
+                exit 0
+              fi
+              echo "Attempt $i/40, retrying in 10s..."
+              sleep 10
+            done
+            echo "SSH never became ready"
+            exit 1
+
+      after:
+        - name: Verify web server
+          run: |
+            curl -sf --retry 5 --retry-delay 3 "http://$INSTANCE_IP" | head -5
+            echo "Web URL: http://$INSTANCE_IP"
